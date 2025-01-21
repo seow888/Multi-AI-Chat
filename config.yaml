@@ -1,0 +1,26 @@
+Google Gemini:
+  api_key: <your_own_key>
+  base_url: https://generativelanguage.googleapis.com/v1beta
+  model: gemini-2.0-flash-exp
+  system_prompt: You are a helpful assistant. 
+  temperature: 1.0
+Ollama:
+  api_key: ''
+  base_url: http://127.0.0.1:11434
+  model: granite3.1-dense
+  system_prompt: You are a helpful assistant.
+  temperature: 1.0
+OpenAI:
+  api_key: <your_own_key>
+  base_url: https://api.openai.com/v1
+  model: gpt-4o-mini
+  system_prompt: You are a helpful assistant.
+    Be creative.
+  temperature: 1.0
+active_provider: OpenAI
+xAI Grok:
+  api_key: <your_own_key>
+  base_url: https://api.x.ai/v1
+  model: grok-2-1212
+  system_prompt: You are a helpful assistant.
+  temperature: 1.0
