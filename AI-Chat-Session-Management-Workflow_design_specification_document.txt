@@ -1,0 +1,417 @@
+Technical Specification Document: AI Chat Session Management Workflow (Revised - Second Check)
+
+1. Introduction
+
+This document provides a detailed technical specification for the chat session management system implemented in the mychat.py application. It outlines how the application manages chat sessions, maintains continuity, and handles transitions between API providers. This document serves as a guide for developing similar applications and includes specific workflow details as requested.
+
+2. Chat Session Management Overview
+
+The chat session management system is the central component of the application, enabling users to:
+
+Create new chat sessions.
+
+Load and continue existing chat sessions, preserving previous conversations and attachments.
+
+Maintain session context when switching API providers seamlessly.
+
+Persist chat session history and file attachments to JSON files.
+
+Handle message formats specific to different API providers using message formatting and parsing functions.
+
+Provide asynchronous processing of API calls and UI updates via a message queue.
+
+The system uses a combination of in-memory data structures, persistent storage (JSON files), and threading to manage chat sessions, attachments, and API communication efficiently.
+
+3. Key Components
+
+3.1. Data Structures
+
+self.sessions: A dictionary that stores all active chat sessions in memory. Keys are session names, and values are lists of tuples, each containing (sender, message, timestamp).
+
+self.sessions = {} # {session_name: [(sender, message, timestamp), ...]}
+Use code with caution.
+Python
+self.current_session: A string that holds the name of the currently active chat session.
+
+self.current_session = None
+Use code with caution.
+Python
+self.conversation_history: A list of dictionaries storing the conversation history in a structured format for API interactions. Each dictionary has role ("user" or "model") and parts (a list containing the message).
+
+self.conversation_history = [] # [{"role": "user" or "model", "parts": [message]}]
+Use code with caution.
+Python
+self.attached_files: A dictionary to store file attachments for each session. It uses the format {session_name: {file_index: {"file_path": <file_path>, "file_name":<file_name>, "file_content":<bytes>}}}.
+
+self.attached_files = {}
+Use code with caution.
+Python
+self.log_dir: The directory where session logs (JSON files) are stored.
+
+self.log_dir = "chat_logs"
+os.makedirs(self.log_dir, exist_ok=True)
+Use code with caution.
+Python
+3.2. Session Logs
+
+Session logs are stored in the chat_logs directory as JSON files, each representing a single session and containing the complete chat history, the structured conversation history, and the attachment info.
+
+3.3 Message Queue
+
+self.message_queue: A Python Queue used for handling user prompts and API responses asynchronously in a separate thread, allowing for non-blocking UI updates.
+
+self.message_queue = Queue()
+Use code with caution.
+Python
+self.processing_thread: A thread that executes the message processing loop to generate API responses and to update the chat display and save the json file.
+
+self.processing_thread = threading.Thread(target=self.process_messages, daemon=True)
+ self.processing_thread.start()
+Use code with caution.
+Python
+4. Workflow and Logic
+
+4.1. App Launch and Initial Session Handling
+
+Initial Load: On application launch, the system loads previously saved session files from chat_logs into memory. It also populates the session listbox on the left side of the UI.
+
+Waiting for Input: The application waits for the user to either create a "New Session" or select one from the listbox, otherwise any prompt submit will fail with an error message.
+
+Prompt Submit Error: If a user directly enters a prompt without creating a new or selecting an existing session, the send_message() function will pop-up an error message and prevent submission of the prompt.
+python def send_message(self, event=None): ... if self.current_session is None: messagebox.showerror("Error","Please create a new session or select an existing one first.") return ...
+
+4.2. Session Creation and Selection
+
+New Session: When the user clicks "New Session":
+
+A unique session name is generated using the current timestamp.
+
+A new session entry is created in self.sessions with an empty list of messages.
+
+self.current_session is set to the new session's name.
+
+self.conversation_history is initialized as an empty list.
+
+A new dictionary entry is created in self.attached_files to track attachments in the new session.
+
+The session list in the UI is updated, and an information message is displayed and the chat display is cleared.
+
+def new_session(self):
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        session_name = f"Session_{timestamp}"
+        self.sessions[session_name] = []
+        self.current_session = session_name
+        self.conversation_history = []
+        self.update_session_list()
+        messagebox.showinfo("New Session", f"Session '{session_name}' created.")
+        self.update_chat_display()
+        self.attached_files[self.current_session] = {}
+Use code with caution.
+Python
+Load Existing Session: When an existing session is selected:
+
+The selected session's data is loaded from self.sessions in memory.
+
+self.current_session is updated to the selected session's name.
+
+self.conversation_history is reconstructed from the loaded messages using role assignments.
+
+The chat display is updated with the loaded session and an info message is displayed.
+
+def load_selected_session(self, event):
+    selected_session = self.session_listbox.get(tk.ACTIVE)
+    if selected_session:
+        self.current_session = selected_session
+        self.conversation_history = []
+        for sender, message, timestamp in self.sessions[self.current_session]:
+            if sender == "You":
+                 self.conversation_history.append({"role":"user", "parts":[message]})
+            elif sender == "AI":
+                self.conversation_history.append({"role":"model", "parts":[message]})
+        self.update_chat_display()
+        messagebox.showinfo("Session Loaded", f"Session '{selected_session}' loaded successfully.")
+Use code with caution.
+Python
+4.3. API Provider Configuration and Initialization
+
+Configuration Loading: The application loads API settings from config.yaml, or uses default values if the file is missing. These settings include the active API provider, API keys, base URLs, and models.
+
+Initialization Process:
+
+The system calls the initialize_api() function whenever a session is created/selected or the API configurations are updated using the API configurator UI.
+
+The initialize_api() function will initialize the API provider based on the config settings.
+
+If API keys or base URLs are missing an error prompt is displayed.
+
+def initialize_api(self):
+     """Initializes the API based on the active provider."""
+     provider = self.config.get("active_provider", "")
+     if not provider:
+         return
+     provider_config = self.config.get(provider, {})
+     try:
+         if provider == "Google Gemini":
+             genai.configure(api_key=provider_config.get("api_key", ""))
+             self.model_instance = genai.GenerativeModel(provider_config.get("model", "gemini-pro"))
+         elif provider in ["OpenAI", "OpenAI Compatible"]:
+             openai.api_key = provider_config.get("api_key", "")
+             if provider == "OpenAI Compatible":
+                 openai.base_url = provider_config.get("base_url", "")
+         elif provider == "Anthropic Claude":
+              anthropic.api_key = provider_config.get("api_key", "")
+              self.model_instance = anthropic.Client()
+         elif provider == "xAI Grok":
+               url = provider_config.get("base_url", "")
+               if url and "https://api.x.ai" not in url:
+                  messagebox.showerror("Error", "Grok Base URL must point to https://api.x.ai.")
+                  return
+         elif provider == "Ollama":
+              self.ollama_model_name = provider_config.get("ollama_model", "llama3.1:latest")
+              self.ollama_command = ["ollama", "run", self.ollama_model_name]
+         self.update_api_label()
+     except Exception as e:
+         messagebox.showerror("API Initialization Error", str(e))
+Use code with caution.
+Python
+4.4. Message Processing and API Communication
+
+User Prompt: When a user sends a message:
+
+The timestamped message with sender is appended to self.sessions.
+
+The message is also added to self.conversation_history with a "user" role.
+
+The user prompt along with action "generate_response" is placed on the message_queue.
+
+The message input box is cleared and the chat display is updated.
+
+def send_message(self, event=None):
+   ...
+    timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
+    self.sessions[self.current_session].append(("You", message, timestamp))
+    self.conversation_history.append({"role": "user", "parts": [message]})
+    self.message_entry.delete("1.0", tk.END)
+    self.update_chat_display()
+    self.message_queue.put(("generate_response", {"user_message": message}))
+Use code with caution.
+Python
+Message Processing and API Response
+
+The process_messages() function runs in a separate thread continuously checking self.message_queue.
+
+If a message with the action "generate_response" is found, then it calls generate_ai_response().
+
+The generate_ai_response() function does the following:
+
+It retrieves the selected API provider settings from self.config.
+
+It constructs the prompt for the API based on the provider and the self.conversation_history.
+
+It interacts with the API to get a response. Retries with delay if requests.exceptions.RequestException with status code "429" is raised.
+
+If the API call fails, error message is displayed, after max retries.
+
+The AI response, with a timestamp and sender ("AI"), is added to self.sessions and to self.conversation_history.
+
+The update_chat_display() is called in the main UI thread using self.root.after() to show the new response.
+
+The session is saved to the JSON file by calling self.save_session().
+
+def process_messages(self):
+    while True:
+        try:
+            task, data = self.message_queue.get()
+            if task == "generate_response":
+                self.generate_ai_response(data["user_message"])
+            self.message_queue.task_done()
+        except Exception as e:
+            messagebox.showerror("Message Processing Error", f"Error processing message queue: {e}")
+
+  def generate_ai_response(self, user_message):
+     """Generates the AI's response based on the active API provider."""
+     max_retries = 3
+     retry_delay = 2
+     ai_message = ""
+     for attempt in range(max_retries):
+         try:
+             provider = self.config.get("active_provider", "")
+             provider_config = self.config.get(provider, {})
+             if provider == "Google Gemini":
+                  response = self.model_instance.generate_content(self.conversation_history)
+                  ai_message = response.text.strip()
+             elif provider in ["OpenAI", "OpenAI Compatible"]:
+                  messages = []
+                  system_prompt = provider_config.get("system_prompt", "You are a helpful assistant.")
+                  messages.append({"role": "system", "content": system_prompt})
+
+                  for msg in self.conversation_history:
+                      if msg["role"] == "user":
+                         messages.append({"role": "user", "content": msg["parts"][0]})
+                      elif msg["role"] == "model":
+                         messages.append({"role":"assistant", "content": msg["parts"][0]})
+                  response = openai.chat.completions.create(
+                     model=provider_config.get("model", "gpt-3.5-turbo"),
+                     messages=messages,
+                     temperature=provider_config.get("temperature", 0.7)
+                 )
+                  ai_message = response.choices[0].message.content.strip()
+
+             elif provider == "Anthropic Claude":
+                 response = self.model_instance.completions.create(
+                      model=provider_config.get("model", "claude-3-opus-20240229"),
+                      max_tokens=10000,
+                      prompt=self.construct_prompt(),
+                 )
+                 ai_message = response.completion.strip()
+             elif provider == "xAI Grok":
+                  url = provider_config.get("base_url", "") + "/chat/completions"
+                  headers = {
+                     "Content-Type": "application/json",
+                     "Authorization": f"Bearer {provider_config.get('api_key', '')}"
+                  }
+                  messages = []
+                  system_prompt = provider_config.get("system_prompt", "You are a helpful assistant.")
+                  messages.append({"role": "system", "content": system_prompt})
+                  for msg in self.conversation_history:
+                      if msg["role"] == "user":
+                         messages.append({"role": "user", "content": msg["parts"][0]})
+                      elif msg["role"] == "model":
+                         messages.append({"role":"assistant", "content": msg["parts"][0]})
+
+                  data = {
+                     "messages": messages,
+                     "model": provider_config.get("model", "grok-1"),
+                     "temperature": provider_config.get("temperature", 0.7)
+                  }
+                  response = requests.post(url, headers=headers, json=data)
+                  response.raise_for_status() # Raise an exception for bad responses
+                  ai_message = response.json()['choices'][0]['message']['content'].strip()
+             elif provider == "Ollama":
+                process = subprocess.Popen(self.ollama_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                stdout, stderr = process.communicate(input=self.construct_prompt())
+                if stderr:
+                    raise Exception(f"Ollama Error:{stderr}")
+                ai_message = stdout.strip()
+             break
+         except requests.exceptions.RequestException as e:
+            if attempt < max_retries -1 and "429" in str(e):
+                time.sleep(retry_delay)
+            else:
+                ai_message = f"API request failed: {e}"
+
+         except Exception as e:
+              if attempt < max_retries - 1:
+                  time.sleep(retry_delay)
+              else:
+                 ai_message = f"Error generating response: {str(e)}"
+
+     timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
+     self.sessions[self.current_session].append(("AI", ai_message, timestamp))
+     self.conversation_history.append({"role": "model", "parts": [ai_message]})
+     self.root.after(0, self.update_chat_display) # Use root.after to update the UI
+     self.save_session()
+Use code with caution.
+Python
+4.5. Maintaining Session Continuity Between API Providers
+
+Conversation Preservation: The application keeps self.conversation_history intact when the user switches between different API providers.
+
+Prompt Formatting: Before initializing the new provider, construct_prompt() is called to format the messages in self.conversation_history to match each specific API provider requirements (e.g. adding the system_prompt when necessary).
+
+Transition: The selected new API provider is initialized with the formatted conversation history to ensure that the chat context is maintained across providers.
+
+def construct_prompt(self):
+    prompt = ""
+    provider = self.config.get("active_provider", "")
+    provider_config = self.config.get(provider, {})
+
+    if provider in ["OpenAI", "OpenAI Compatible", "xAI Grok"]:
+        system_prompt = provider_config.get("system_prompt", "You are a helpful assistant.")
+        prompt += f"System: {system_prompt}\n"
+        for msg in self.conversation_history:
+           if msg["role"] == "user":
+              prompt += f"User: {msg['parts'][0]}\n"
+           elif msg["role"] == "model":
+              prompt += f"Assistant: {msg['parts'][0]}\n"
+    elif provider == "Anthropic Claude":
+       system_prompt = provider_config.get("system_prompt", "You are a helpful assistant.")
+       prompt += f"{system_prompt}\n\n"
+       for msg in self.conversation_history:
+          if msg["role"] == "user":
+             prompt += f"Human: {msg['parts'][0]}\n"
+          elif msg["role"] == "model":
+             prompt += f"Assistant: {msg['parts'][0]}\n"
+    elif provider == "Ollama":
+        system_prompt = provider_config.get("system_prompt", "You are a helpful assistant.")
+        prompt += f"{system_prompt}\n"
+        for msg in self.conversation_history:
+           if msg["role"] == "user":
+              prompt += f"User: {msg['parts'][0]}\n"
+           elif msg["role"] == "model":
+              prompt += f"Assistant: {msg['parts'][0]}\n"
+    else:
+        for msg in self.conversation_history:
+           if msg["role"] == "user":
+               prompt += f"{msg['parts'][0]}\n"
+           elif msg["role"] == "model":
+               prompt += f"{msg['parts'][0]}\n"
+    return prompt
+Use code with caution.
+Python
+4.6. Session Persistence
+
+Saving: The save_session() function serializes the chat_log, conversation_history, and attached_files to JSON and writes the data to a file.
+
+def save_session(self):
+    """Saves the current session data."""
+    if self.current_session:
+        log_file = os.path.join(self.log_dir, f"{self.current_session}.json")
+        with open(log_file, "w") as f:
+            json.dump({
+               "chat_log": self.sessions[self.current_session],
+               "conversation_history": self.conversation_history,
+               "attached_files": self.attached_files.get(self.current_session, {})
+                 }, f, indent=4)
+Use code with caution.
+Python
+Loading: The load_previous_sessions() function loads previously saved sessions from the chat_logs folder. The most recently modified session is loaded first.
+```python
+def load_previous_sessions(self):
+"""Loads the previously saved sessions."""
+log_files = glob.glob(os.path.join(self.log_dir, "*.json"))
+log_files.sort(key=os.path.getmtime, reverse=True)
+for log_file in log_files:
+session_name = os.path.splitext(os.path.basename(log_file))[0]
+try:
+with open(log_file, "r") as f:
+data = json.load(f)
+self.sessions[session_name] = data["chat_log"]
+if "attached_files" in data:
+self.attached_files[session_name] = data["attached_files"]
+except:
+print(f"Failed to load log file {log_file}")
+
+self.update_session_list()
+```
+Use code with caution.
+5. Session Log File Format
+
+5.1. Naming Convention
+
+Session log files use the format Session_YYYYMMDD_HHMMSS.json.
+
+5.2. File Content
+
+The JSON file will contain:
+
+{
+    "chat_log": [["sender", "message", "timestamp"], ...],
+    "conversation_history": [{"role": "user" or "model", "parts": ["message"]}, ...],
+     "attached_files" :  {file_index: {"file_path": <file_path>, "file_name":<file_name>, "file_content":<bytes>}}
+}
+Use code with caution.
+Json
+6. Conclusion
+
+This revised document ensures that all significant aspects of the chat session management workflow are thoroughly covered. All key tasks, logic, and their corresponding code snippets are detailed, providing a comprehensive design for similar projects. This document includes all the requested tasks such as initial session handling, API initialization, message processing, session persistence and switching between the different providers.
