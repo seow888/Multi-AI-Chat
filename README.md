@@ -1,5 +1,6 @@
-pip install PyQt6 google-generativeai openai anthropic requests
-python mychat-pyqt6-v2.py
+$ pip install PyQt6 google-generativeai openai anthropic requests
+
+$ python mychat-pyqt6-v2.py
 
 ![image](https://github.com/user-attachments/assets/f75dc284-35a7-4dbe-a470-8f0a8b8019e8)
 
