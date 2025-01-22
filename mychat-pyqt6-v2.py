@@ -132,13 +132,16 @@ class ChatSessionManager:
         return session_id, session_name
 
     def delete_session(self, session_id):
-        """Delete session and its file"""
+        """Improved with file check and error propagation"""
         if session_id in self.sessions:
+            file_path = os.path.join("chat_logs", f"{session_id}.json")
             try:
-                os.remove(os.path.join("chat_logs", f"{session_id}.json"))
+                if os.path.exists(file_path):
+                    os.remove(file_path)
                 del self.sessions[session_id]
             except Exception as e:
                 logging.error(f"Error deleting session {session_id}: {str(e)}")
+                raise  # Critical: Let UI handle this error
 
     def add_message(self, session_id, sender, message, timestamp):
         """Add message to session"""
@@ -587,8 +590,11 @@ class ModernChatWindow(QMainWindow):
         right_layout.setContentsMargins(0, 0, 0, 0)
         
         self.chat_display = QTextBrowser()
-        self.chat_display.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
-        right_layout.addWidget(self.chat_display)
+        self.chat_display.setSizePolicy(
+            QSizePolicy.Policy.Expanding, 
+            QSizePolicy.Policy.Expanding
+        )
+        right_layout.addWidget(self.chat_display, 1)  # Add stretch factor
         
         # Input area
         input_panel = QWidget()
@@ -724,10 +730,14 @@ class ModernChatWindow(QMainWindow):
         self._update_chat_display()
 
     def _delete_chat(self):
+        """Added error handling for file deletion"""
         current_item = self.chat_list.currentItem()
         if current_item:
             session_id = current_item.data(Qt.ItemDataRole.UserRole)
-            self.session_manager.delete_session(session_id)
+            try:
+                self.session_manager.delete_session(session_id)
+            except Exception as e:
+                QMessageBox.critical(self, "Deletion Error", str(e))
             self._update_chat_list()
             if self.current_session_id == session_id:
                 self._create_new_chat()
@@ -754,7 +764,7 @@ class ModernChatWindow(QMainWindow):
         dialog = QDialog(self)
         dialog.setWindowTitle("Select Emoji")
         layout = QGridLayout()
-        emojis = ["😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇",
+        emojis = ["👍", "🙏", "😊", "😅", "😇", "😔", "😢", "😄", "🥳", "😘", "🤗", "😂", "🍻", "🤩", "👏", "👌", "✌️", "☝️", "👎", "👋", "💪", "🫶", "🥱", "😴", "🙄", "🤡", "💩", "😭", "😤", "😡", "☹️", "😣", "😖", "😫", "😎", "🤓", "🧐", "🤪", "😜", "😝", "😍", "🥰", "😚", "😋", "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇",
                  "😍", "🤩", "😘", "😗", "😚", "😋", "😛", "😝", "🤑", "🤗"]
         
         for i, emoji in enumerate(emojis):
@@ -780,4 +790,4 @@ if __name__ == "__main__":
     window = ModernChatWindow()
     window.show()
     sys.exit(app.exec())
-	
+
