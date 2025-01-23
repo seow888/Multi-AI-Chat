@@ -2,7 +2,7 @@ $ pip install markdown pyqt6 google-generativeai anthropic openai requests
 
 $ python mychat-pyqt6-v4.py
 
-![image](https://github.com/user-attachments/assets/18d0f554-e04c-441a-b18c-46b4e6cc9186)
+![image](https://github.com/user-attachments/assets/68ae74f3-3cc2-4bf1-9d8e-019a2c819f3a)
 
 ![image](https://github.com/user-attachments/assets/0c8143ee-ff2e-45c5-ad68-3bb0ef30ab8a)
 
