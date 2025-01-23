@@ -1,4 +1,4 @@
-$ pip install PyQt6 google-generativeai openai anthropic requests
+$ pip install markdown pyqt6 google-generativeai openai anthropic python-dotxl requests
 
 $ python mychat-pyqt6-v2.py
 
