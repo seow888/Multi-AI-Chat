@@ -1,0 +1,112 @@
+I'll help add support for both API providers. Let's break this into steps:
+
+1. Configuration Updates
+Added to APIConfigManager's default config:
+
+python
+Copy
+# In load_config() defaults
+{
+    "active_provider": "OpenAI",
+    # ... existing providers ...
+    "OpenAI-Compatible": {"api_key": "", "base_url": "", "model": "custom-model", "temperature": 0.7},
+    "DeepSeek": {"api_key": "", "model": "deepseek-chat", "temperature": 0.7}
+}
+2. UI Configuration (APIConfigDialog)
+
+python
+Copy
+# In _setup_ui() - update provider combo:
+self.provider_combo.addItems([
+    "Google Gemini", "OpenAI", "Anthropic Claude", 
+    "xAI Grok", "Ollama", "OpenAI-Compatible", "DeepSeek"
+])
+
+# In _update_fields():
+elif provider == "OpenAI-Compatible":
+    self.model_combo.addItems(["custom-model", "llama2-13b-chat", "mixtral-8x7b"])
+    self.base_url_input.setVisible(True)
+elif provider == "DeepSeek":
+    self.model_combo.addItems(["deepseek-chat", "deepseek-coder"])
+    self.base_url_input.setVisible(False)
+3. API Handling in ApiWorker
+
+python
+Copy
+# Add these cases in the run() method's provider check:
+
+elif provider == "OpenAI-Compatible":
+    client = OpenAI(
+        base_url=config["base_url"],
+        api_key=config["api_key"]
+    )
+    response = client.chat.completions.create(
+        model=config["model"],
+        messages=converted_history,
+        temperature=config.get("temperature", 0.7)
+    )
+    ai_message = response.choices[0].message.content
+
+elif provider == "DeepSeek":
+    headers = {
+        "Authorization": f"Bearer {config['api_key']}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "model": config["model"],
+        "messages": converted_history,
+        "temperature": config.get("temperature", 0.7)
+    }
+    response = requests.post(
+        "https://api.deepseek.com/v1/chat/completions",
+        headers=headers,
+        json=data
+    )
+    response.raise_for_status()
+    ai_message = response.json()['choices'][0]['message']['content']
+4. Validation Updates
+
+python
+Copy
+# In APIConfigDialog._save_config() add:
+
+elif provider == "DeepSeek":
+    if not config["api_key"]:
+        QMessageBox.critical(self, "Error", "API Key is required for DeepSeek")
+        return
+Key Implementation Notes:
+
+OpenAI-Compatible
+
+Works with any OpenAI-compatible API (LocalAI, LiteLLM, etc)
+
+Requires base URL (e.g., http://localhost:8080/v1)
+
+Uses standard OpenAI client library
+
+DeepSeek Specifics
+
+Official API endpoint hardcoded for security
+
+Requires API key from DeepSeek platform
+
+Supports both chat and coder models
+
+Testing Recommendations:
+
+For OpenAI-compatible:
+
+bash
+Copy
+# Test with local instance
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Authorization: Bearer your-key" \
+  -d '{"model":"custom-model","messages":[{"role":"user","content":"Hello"}]}'
+For DeepSeek:
+
+python
+Copy
+# Validate API key format starts with 'ds-'
+if not config["api_key"].startswith("ds-"):
+    raise ValueError("Invalid DeepSeek API key format")
+W
