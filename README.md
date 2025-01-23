@@ -1,6 +1,10 @@
+# v4 fully tested working
 $ pip install markdown pyqt6 google-generativeai anthropic openai requests
-
 $ python mychat-pyqt6-v4.py
+
+# v5 adds new multimodal capabilities.
+$ pip install pymupdf python-docx pandas pillow transformers torch
+$ python mychat-pyqt6-v5.py
 
 ![image](https://github.com/user-attachments/assets/68ae74f3-3cc2-4bf1-9d8e-019a2c819f3a)
 
