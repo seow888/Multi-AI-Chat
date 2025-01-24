@@ -31,7 +31,7 @@ import fitz  # PyMuPDF for PDF processing
 from PIL import Image  # Pillow for image processing
 import docx  # python-docx for Word documents
 import pandas as pd # pandas for excel documents
-from transformers import AutoProcessor, LlavaForConditionalGeneration, AutoTokenizer # Transformers for LLaVA and LayoutLMv3
+from transformers import AutoProcessor, LlavaForConditionalGeneration, AutoTokenizer, BitsAndBytesConfig # Transformers for LLaVA and LayoutLMv3, BitsAndBytesConfig import
 import torch # Torch for model inference
 
 
@@ -623,23 +623,31 @@ class ModernChatWindow(QMainWindow):
             self.status_bar.showMessage("Loading LLaVA model...", 0) # Status message
             QApplication.processEvents() # Update UI immediately
 
-            self.image_processor = AutoProcessor.from_pretrained(
-                "llava-hf/llava-1.5-7b-hf",
-                use_fast=True  # Add this line
+            # Add quantization config - BitsAndBytesConfig for 4-bit quantization
+            quantization_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=torch.float16
             )
+
+            # Force CPU mode - CUDA Workaround Option A
+            device_map = "cpu"
+
             self.image_model = LlavaForConditionalGeneration.from_pretrained(
                 "llava-hf/llava-1.5-7b-hf",
-                device_map="auto", # or "cpu" if you don't have GPU, consider "cpu" for broader compatibility if needed
-                load_in_4bit=True, # Reduce memory footprint
-                torch_dtype=torch.float16 # Use float16 for further memory saving and speedup if possible
+                device_map=device_map, # device_map="cpu" for CPU mode
+                quantization_config=None,  # Disable quantization when using CPU mode
+                torch_dtype=torch.float16
             )
-            self.status_bar.showMessage("LLaVA model loaded.", 3000) # Success message
+            self.status_bar.showMessage("LLaVA model loaded in CPU mode.", 3000) # Status message
 
             # LayoutLMv3 - Initialize but not used in this version, for future use
             # self.layout_tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutlmv3-base") # LayoutLMv3 tokenizer
 
         except Exception as e:
             logging.error(f"Model initialization error: {e}")
+            QMessageBox.critical("Model Error", str(e))
             self.status_bar.showMessage("Model loading failed.", 5000) # Error message on status bar
             if hasattr(self, 'image_model'):
                 del self.image_model # Clean up even if loading fails to prevent resource leaks
