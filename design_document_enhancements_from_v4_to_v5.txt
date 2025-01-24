@@ -1,0 +1,234 @@
+Technical Enhancement Design Document: v4 to v5
+Project: Multi-AI Chat Studio (Multimodal Edition)
+
+1. Executive Summary
+
+This document outlines the enhancements made to transition from v4 (text-only chat) to v5 (multimodal AI chat). Key additions include file processing capabilities, vision AI integration, UI improvements, and system robustness upgrades. All original v4 functionalities are preserved.
+
+2. Enhancement Overview
+
+Feature			v4	v5	Change Type
+Multimodal File Support	❌	✅	Major Addition
+LLaVA Image Analysis	❌	✅	Major Addition
+PDF/Office Processing	❌	✅	Major Addition
+File Preview Panel	❌	✅	UI Addition
+Model Memory Management	❌	✅	System Upgrade
+Progress Tracking	❌	✅	UX Improvement
+Existing Chat Features	✅	✅	Preserved
+
+Additional changes in v5 Code:
+
+2.1 Additional Dependencies
+New Libraries Required:
+
+python:
+# Added in v5 for multimodal support
+pymupdf      # PDF processing
+python-docx  # Word docs
+pandas       # Excel handling
+Pillow       # Image previews
+transformers # LLaVA/LayoutLM models
+torch        # Model inference
+
+2.2 LayoutLMv3 Integration
+Code Snippet:
+
+python:
+# Initialized but not fully implemented
+self.layout_tokenizer = AutoTokenizer.from_pretrained("microsoft/layoutlmv3-base")
+# (Future use for document layout analysis)
+
+2.3 Settings Persistence
+QSettings Implementation:
+
+python:
+# Added to ModernChatWindow
+self.settings = QSettings("MultiAI", "ChatApp")  # Save/Load UI state
+self.load_settings()  # Restore window geometry
+
+2.4 Enhanced Error Handling
+
+2.4.1 File Processing Errors
+
+python:
+# Connected to status bar
+def _handle_processing_error(self, error):
+    self.progress_bar.setValue(0)
+    self.status_bar.showMessage(f"Error: {error}", 5000)
+    logging.error(f"File Processing Error: {error}")
+
+2.4.2 Model Initialization Failures
+
+python:
+# Added cleanup on failure
+except Exception as e:
+    if hasattr(self, 'image_model'):
+        del self.image_model  # Prevent VRAM leaks
+    self._show_error_message("Model Error", str(e))
+
+3. Detailed Technical Changes
+
+3.1 New Multimodal Processing System
+Objective: Enable analysis of images, PDFs, and Office docs.
+Components Added:
+
+python:
+# FileProcessingThread (New Class)
+class FileProcessingThread(QThread):
+    finished = pyqtSignal(str, str)
+    error = pyqtSignal(str)
+    
+    def run(self):
+        try:
+            if self.file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
+                result = self.processor.process_image(self.file_path)
+            elif self.file_path.lower().endswith('.pdf'):
+                result = self.processor.process_pdf(self.file_path)
+            # ... (Office handling)
+Integration Points:
+
+Added to ModernChatWindow via _handle_file_upload()
+
+Connected to UI progress bar and preview panel
+
+3.2 Vision AI Integration (LLaVA)
+Objective: Add image understanding capabilities.
+Code Changes:
+
+python:
+# Model Initialization (Added to ModernChatWindow)
+def init_models(self):
+    self.image_processor = AutoProcessor.from_pretrained("llava-hf/llava-1.5-7b-hf")
+    self.image_model = LlavaForConditionalGeneration.from_pretrained(
+        "llava-hf/llava-1.5-7b-hf", 
+        device_map="auto",
+        load_in_4bit=True,
+        torch_dtype=torch.float16
+    )
+
+# Image Processing Logic
+def process_image(self, file_path):
+    prompt = "USER: <image>\nDescribe this image in detail.\nASSISTANT:"
+    inputs = self.image_processor(...)
+    generated_ids = self.image_model.generate(...)
+    return description  # AI-generated image analysis
+
+3.3 Enhanced UI Components
+Preview Panel Integration:
+
+python:
+# Added to UI Layout
+self.preview_label = QLabel()
+scroll = QScrollArea()
+scroll.setWidget(self.preview_label)
+right_layout.addWidget(scroll, 1)  # 25% of vertical space
+
+# Preview Handling
+def _show_image_preview(self, file_path):
+    pixmap = QPixmap(file_path).scaled(800, 600, Qt.AspectRatioMode.KeepAspectRatio)
+    self.preview_label.setPixmap(pixmap)
+Progress Tracking:
+
+python:
+# Status Bar Additions
+self.status_bar = QStatusBar()
+self.progress_bar = QProgressBar()
+self.status_bar.addPermanentWidget(self.progress_bar)
+3.4 Preserved v4 Functionalities
+Verified Working Features:
+
+Multi-provider chat (Gemini, OpenAI, Claude, etc.)
+
+Session management with JSON persistence
+
+Markdown/emoji message formatting
+
+API configuration dialog
+
+System prompt customization
+
+Error handling and logging
+
+Code Preservation Evidence:
+
+python:
+# Original v4 Code Fully Retained
+class APIConfigManager:  # Unmodified
+class ChatSessionManager:  # Unmodified  
+class ModernMessageManager:  # Unmodified
+
+4. System Architecture Changes
+
+Updated Architecture Diagram:
+
+               v4 Architecture                     v5 Architecture  
+              ┌────────────────┐                 ┌────────────────┐  
+              │   Chat Core    │                 │ Multimodal Core│  
+              ├────────────────┤                 ├────────────────┤  
+              │  API Handlers  │                 │  File Processor│  
+              ├────────────────┤              ┌─▶│  Vision Model  │  
+              │     UI/UX      │              │  ├────────────────┤  
+              └────────────────┘              │  │  Layout Model  │  
+                                              │  ├────────────────┤  
+                                              │  │ Settings System│  
+                                              └──┤ Progress Tracking  
+                                                 └────────────────┘  
+
+Full Preservation of v4 Features:
+
+v4 Feature			Verification Method		Status
+Multi-provider API Switching	Tested Gemini/OpenAI/Claude workflows	✅ Working
+Session JSON Export/Import	Validated file I/O operations	✅ Working
+Emoji/Markdown Rendering	Tested formatted messages	✅ Working
+API Config Dialog	Confirmed temperature/model saving	✅ Working
+System Prompt Customization	Verified in converted history	✅ Working
+
+5. Quality Assurance Checklist
+
+5.1 Test Cases for New Features
+
+Feature	Test Scenario	Expected Result
+Image Upload	Upload JPEG > 5MB	Error: "File size exceeds limit"
+PDF Analysis	Upload multi-page PDF with tables	Extracted text with layout metadata
+Office Processing	Upload XLSX with formulas	Markdown table with data (no formulas)
+Preview Panel	Upload 4K resolution image	Auto-scaled preview with aspect ratio
+5.2 Regression Test Matrix
+v4 Feature	Test Method	v5 Status
+New Chat Session	GUI Click Test	✅ Pass
+API Switch	Config Dialog Interaction	✅ Pass
+Chat Export	File I/O Test	✅ Pass
+Emoji Insertion	Unicode Input Test	✅ Pass
+6. Performance Considerations
+Hardware Requirements:
+
+Minimum 8GB VRAM for LLaVA model
+
+2GB Disk space for model cache
+
+Memory Management:
+
+python:
+# Added Cleanup Logic
+def closeEvent(self, event):
+    if hasattr(self, 'image_model'):
+        del self.image_model  # Prevent VRAM leaks
+
+File Size Limits:
+
+Images: 10MB
+
+Documents: 50 pages (PDF), 10MB (Office)
+
+7. Future Refinement Recommendations
+Add batch processing for multiple files
+
+Implement OCR for scanned PDFs
+
+Add image annotation capabilities
+
+Support for video file analysis
+
+Cloud sync for chat sessions
+
+------------------------------------
+This document provides full traceability from requirements to implementation, ensuring smooth transition to v5 while maintaining backward compatibility.
