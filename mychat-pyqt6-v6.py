@@ -623,7 +623,10 @@ class ModernChatWindow(QMainWindow):
             self.status_bar.showMessage("Loading LLaVA model...", 0) # Status message
             QApplication.processEvents() # Update UI immediately
 
-            self.image_processor = AutoProcessor.from_pretrained("llava-hf/llava-1.5-7b-hf")
+            self.image_processor = AutoProcessor.from_pretrained(
+                "llava-hf/llava-1.5-7b-hf",
+                use_fast=True  # Add this line
+            )
             self.image_model = LlavaForConditionalGeneration.from_pretrained(
                 "llava-hf/llava-1.5-7b-hf",
                 device_map="auto", # or "cpu" if you don't have GPU, consider "cpu" for broader compatibility if needed
