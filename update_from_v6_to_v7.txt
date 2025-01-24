@@ -1,19 +1,17 @@
-Let's fix the thread safety issues causing the Excel attachment crash. Here's the step-by-step solution:
+Fixing the thread safety issues causing the Excel attachment crash. Suggest this the step-by-step solution:
 
-🔧 Key Fixes Needed
+🔧 *Key Fixes Needed*
+
 Thread-GUI Separation
-
 Move all GUI updates to main thread signals
-
 Remove direct GUI access from worker threads
-
 Add proper progress signaling
 
-🛠️ Modified Code Sections
+🛠️ *Modified Code Sections*
+
 Add Progress Signal in ModernChatWindow
 
-python
-Copy
+python:
 class ModernChatWindow(QMainWindow):
     progress_updated = pyqtSignal(int)  # Add this at class level
 
@@ -22,16 +20,14 @@ class ModernChatWindow(QMainWindow):
         self.progress_updated.connect(self._update_progress_bar)  # Add this line
 Update Progress Handling
 
-python
-Copy
+python:
 def _update_progress_bar(self, value):
     """Handle progress updates from any thread"""
     self.progress_bar.setValue(value)
 Modify File Processing Methods
 In process_image, process_pdf, and process_office:
 
-python
-Copy
+python:
 def process_image(self, file_path):
     try:
         self.progress_updated.emit(10)  # Replace progress_bar access
@@ -40,8 +36,7 @@ def process_image(self, file_path):
 Update FileProcessingThread
 Remove GUI operations from thread:
 
-python
-Copy
+python:
 class FileProcessingThread(QThread):
     finished = pyqtSignal(str, str)
     error = pyqtSignal(str)
@@ -55,8 +50,7 @@ class FileProcessingThread(QThread):
             self.finished.emit(content, file_path)
 Connect Progress Signal in Attachment Handler
 
-python
-Copy
+python:
 def _process_file_content(self, file_path):
     self.file_processor_thread = FileProcessingThread(file_path)
     self.file_processor_thread.progress.connect(self.progress_updated)  # Add this
@@ -64,8 +58,7 @@ def _process_file_content(self, file_path):
 📝 Critical Changes Summary
 Signal-Based Progress
 
-python
-Copy
+python:
 # Was (thread-unsafe):
 self.progress_bar.setValue(10)
 
@@ -74,34 +67,29 @@ self.progress_updated.emit(10)
 GUI Updates Only via Signals
 Ensure all label/text updates happen through:
 
-python
-Copy
+python:
 self.finished.emit(processed_content)  # Worker thread
-python
-Copy
+
+python:
 # Handled in main thread:
 def _handle_processed_content(self, text):
     self.chat_display.append(text)  # Now thread-safe
 Removed Direct GUI Access
 Eliminated all:
 
-python
-Copy
+python:
 QApplication.processEvents()  # Was causing recursive repaints
-✅ Testing Checklist
+
+✅ *Testing Checklist*
+
 Attach small Excel file (<1MB)
-
 Try with image/PDF files
-
 Monitor system resources during processing
-
 Check logs for thread warnings
 
-🌟 Expected Outcome
+🌟 *Expected Outcome*
+
 No more cross-thread GUI errors
-
 Smooth file processing with progress updates
-
 Stable application during file attachments
 
-L
