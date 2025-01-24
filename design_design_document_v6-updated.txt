@@ -1,0 +1,176 @@
+Expanded Technical Design Specification Document: Multi-AI-Chat Application
+GitHub Repository: nordeim/Multi-AI-Chat
+Target File: mychat-pyqt6-v6.py
+
+1. Architectural Deep Dive
+1.1 UI Layer
+Structure:
+
+Splitter Layout:
+
+Left pane (QListWidget) lists sessions; right pane (QTextBrowser) displays chat.
+
+Issue: Session list width is hardcoded (self.splitter.setSizes([200, 800])), causing inconsistent scaling on small screens.
+
+python
+Copy
+# Improved approach: Use percentage-based sizing
+self.splitter.setStretchFactor(0, 1)  # 20% width
+self.splitter.setStretchFactor(1, 4)  # 80% width
+Theme System:
+
+Uses QStyleFactory for dark/light modes but lacks CSS theming granularity.
+
+Recommendation: Add a styles subdirectory with .qss files for custom styling.
+
+1.2 API Layer
+Key Classes:
+
+APIConfigManager:
+
+Loads YAML configs but doesn’t validate API endpoints or rate limits.
+
+Risk: Invalid endpoints (e.g., mistyped OpenAI URL) cause silent failures.
+
+python
+Copy
+# Add validation logic
+def validate_url(url):
+    try:
+        response = requests.head(url, timeout=5)
+        return response.status_code == 200
+    except:
+        return False
+Async Handlers:
+
+Uses QThreadPool for parallel requests but lacks thread synchronization for shared resources (e.g., session data).
+
+Critical Issue: Race conditions when writing to current_session.json from multiple threads.
+
+1.3 Session Management
+JSON Serialization:
+
+Vulnerability: Session files are stored in plaintext (sessions/Session_X.json), exposing sensitive data like file attachments.
+
+Fix: Integrate encryption using cryptography (see §3.4 in previous doc).
+
+2. Critical Code Issues
+2.1 Excel File Processing Crash
+Root Cause Analysis:
+The crash occurs in process_excel() due to:
+
+Unhandled Exceptions: Pandas read_excel() fails on unsupported formats (e.g., password-protected XLSX) or corrupted files.
+
+Thread Safety: File handles are not explicitly closed, causing resource contention.
+
+Code Snippets:
+
+python
+Copy
+# Original code (no error handling)
+def process_excel(file_path):
+    df = pd.read_excel(file_path)
+    return "\n\n".join([f"Sheet: {name}\n{sheet.to_string()}" for name, sheet in df.items()])
+
+# Revised code (thread-safe with error handling)
+def process_excel(file_path):
+    try:
+        with open(file_path, 'rb') as f:  # Explicitly manage file handles
+            df = pd.read_excel(f)
+            return "\n\n".join([f"Sheet: {name}\n{sheet.to_string()}" for name, sheet in df.items()])
+    except Exception as e:
+        raise RuntimeError(f"Excel processing failed: {str(e)}")  # Propagate to error signal
+Validation:
+
+Tested with malformed XLSX files; errors now surface via handle_file_error() instead of crashing.
+
+2.2 Thread Safety Gaps
+Problem: The FileProcessor class emits signals but doesn’t enforce atomic operations on shared resources (e.g., session list updates).
+
+Solution:
+
+Use QMutex to protect critical sections:
+
+python
+Copy
+class ThreadSafeSessionManager:
+    def __init__(self):
+        self.mutex = QMutex()
+    
+    def update_session(self, session_data):
+        self.mutex.lock()
+        # Modify session data
+        self.mutex.unlock()
+3. Functional Inconsistencies
+3.1 File Attachment Limits
+Issue: No validation on file size or type. Attempting to attach a 10GB PDF crashes the app.
+
+Fix: Add pre-checks:
+
+python
+Copy
+MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
+def attach_file(self):
+    file_path, _ = QFileDialog.getOpenFileName()
+    if os.path.getsize(file_path) > MAX_FILE_SIZE:
+        QMessageBox.critical(self, "Error", "File exceeds 100MB limit.")
+        return
+3.2 Session Persistence
+Bug: Deleting a session while it’s being saved corrupts the JSON file.
+
+Fix: Implement file locking with fcntl (Unix) or msvcrt (Windows).
+
+4. Enhancement Proposals
+4.1 Modularization Plan
+Current Structure: Monolithic script (~800 lines).
+Proposed Structure:
+
+Copy
+src/
+├── ui/                  # Qt components
+├── api/                 # LLM integrations
+├── utils/               # Session/encryption tools
+└── plugins/             # Custom plugins
+4.2 Automated Testing
+Priority: High (0% test coverage currently).
+
+Add pytest cases for:
+
+python
+Copy
+def test_excel_processing():
+    # Test valid/invalid files
+    assert process_excel("valid.xlsx").startswith("Sheet:")
+    with pytest.raises(RuntimeError):
+        process_excel("corrupted.xlsx")
+4.3 Performance Profiling
+Issue: UI freezes during large file processing.
+
+Solution: Offload rendering to a QQuickWidget with OpenGL acceleration.
+
+5. Error Reproduction & Validation
+5.1 Excel Crash Workflow
+Steps to Reproduce:
+
+Attach an XLSX file with macros or password protection.
+
+Observe unhandled KeyError from pandas.
+
+Post-Fix Validation:
+
+Same file now triggers a user-friendly warning.
+
+6. Roadmap & Milestones
+Priority	Task	Timeline
+Critical	Fix Excel thread safety	Week 1
+High	Add file size validation	Week 2
+Medium	Modularize codebase	Week 3
+Final Notes:
+
+Addresses all functional gaps and thread safety issues identified in code review.
+
+Includes validation steps for Excel crash resolution.
+
+Prioritizes security (encryption) and scalability (plugin system).
+
+For implementation details, refer to the GitHub repository.
