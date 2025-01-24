@@ -1,0 +1,14 @@
+PyQt6==6.6.0
+transformers==4.40.0
+torch==2.2.1
+accelerate==0.29.3
+bitsandbytes==0.43.1
+pymupdf==1.23.25
+pillow==10.3.0
+python-docx==1.1.0
+pandas==2.2.2
+openpyxl==3.1.2
+anthropic==0.18.0
+google-generativeai==0.3.2
+openai==1.12.0
+pywin32==306
