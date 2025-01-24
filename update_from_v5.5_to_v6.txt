@@ -1,0 +1,35 @@
+$ diff mychat-pyqt6-v6.py mychat-pyqt6-v5.5.py 
+34c34
+< from transformers import AutoProcessor, LlavaForConditionalGeneration, AutoTokenizer, BitsAndBytesConfig # Transformers for LLaVA and LayoutLMv3, BitsAndBytesConfig import
+---
+> from transformers import AutoProcessor, LlavaForConditionalGeneration, AutoTokenizer # Transformers for LLaVA and LayoutLMv3
+626,631c626,628
+<             # Add quantization config - BitsAndBytesConfig for 4-bit quantization
+<             quantization_config = BitsAndBytesConfig(
+<                 load_in_4bit=True,
+<                 bnb_4bit_use_double_quant=True,
+<                 bnb_4bit_quant_type="nf4",
+<                 bnb_4bit_compute_dtype=torch.float16
+---
+>             self.image_processor = AutoProcessor.from_pretrained(
+>                 "llava-hf/llava-1.5-7b-hf",
+>                 use_fast=True  # Add this line
+633,636d629
+< 
+<             # Force CPU mode - CUDA Workaround Option A
+<             device_map = "cpu"
+< 
+639,641c632,634
+<                 device_map=device_map, # device_map="cpu" for CPU mode
+<                 quantization_config=None,  # Disable quantization when using CPU mode
+<                 torch_dtype=torch.float16
+---
+>                 device_map="auto", # or "cpu" if you don't have GPU, consider "cpu" for broader compatibility if needed
+>                 load_in_4bit=True, # Reduce memory footprint
+>                 torch_dtype=torch.float16 # Use float16 for further memory saving and speedup if possible
+643c636
+<             self.status_bar.showMessage("LLaVA model loaded in CPU mode.", 3000) # Status message
+---
+>             self.status_bar.showMessage("LLaVA model loaded.", 3000) # Success message
+650d642
+<             QMessageBox.critical("Model Error", str(e))
