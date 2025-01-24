@@ -1,0 +1,57 @@
+Code Review Summary: Compliance Check of v5 Against Design/Update Docs
+
+I’ve analyzed your mychat-pyqt6-v5.py against the update and design docs. Here’s the breakdown:
+
+✅ Fully Implemented Changes
+UI Improvements
+
+Dark Theme: Stylesheet applied (e.g., setStyleSheet("background-color: #2b2b2b; color: #ffffff;")).
+
+Window Resizing: resizeEvent method dynamically adjusts input field widths.
+
+Model Selection Dropdown: Added self.model_selector with Gemini/OpenAI options.
+
+Code Refactoring
+
+API Handlers Modularized: Confirmed separation into api_handlers.py (e.g., OpenAIHandler, GoogleGenerativeAIHandler classes).
+
+New Features
+
+Token Counting: update_token_count() uses tiktoken for OpenAI models.
+
+System Role Customization: self.system_role_input added and included in API calls.
+
+Bug Fixes
+
+History Duplication: Check if history[-1]["content"] != content before appending.
+
+API Timeout Handling: Added timeout=15 in OpenAI API calls.
+
+⚠️ Minor Gaps/Observations
+Google Generative AI Timeout
+
+The design doc mentions timeouts, but GoogleGenerativeAIHandler does not explicitly set timeouts like OpenAI’s timeout=15.
+
+Token Counting for Gemini
+
+The update doc specifies token counting for both models, but update_token_count() only handles OpenAI (no Gemini token logic).
+
+Error Handling Consistency
+
+OpenAI uses show_error_message(f"OpenAI API Error: {e}"), but Gemini uses a generic "An error occurred". Consider standardizing.
+
+📝 Suggestions for Improvement
+Gemini Timeout
+
+python:
+# In GoogleGenerativeAIHandler.generate_response()  
+response = model.generate_content(prompt, request_options={"timeout": 15})  # Add if supported  
+Gemini Token Counting
+Add a helper function (e.g., using google.generativeai.count_tokens()).
+
+System Role for Gemini
+The current code appends system role text to prompt for Gemini. Ensure this aligns with Gemini’s API requirements (no native system role).
+
+📊 Compliance Score: ~90%
+Most documented changes are correctly implemented. Minor gaps are non-critical but would enhance robustness.
+
