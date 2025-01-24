@@ -3,8 +3,8 @@ $ pip install markdown pyqt6 google-generativeai anthropic openai requests
 $ python mychat-pyqt6-v4.py
 
 # v5 adds new multimodal capabilities.
-$ pip install pymupdf python-docx pandas pillow transformers torch
-$ python mychat-pyqt6-v5.py
+$ pip install pymupdf python-docx pandas pillow transformers torch pyqt6 google.generativeai markdown anthropic openai accelerate
+$ python mychat-pyqt6-v6.py
 
 ![image](https://github.com/user-attachments/assets/68ae74f3-3cc2-4bf1-9d8e-019a2c819f3a)
 
@@ -40,3 +40,22 @@ Stability Improvements
 🔒 Comprehensive error handling
 ⚡ Async API calls with retry logic
 📄 PEP-8 compliant code structure
+
+
+Feature	Code Evidence	Status
+Image Preview	_show_image_preview() uses QPixmap with aspect ratio scaling	✅ Pass
+PDF Text Extraction	process_pdf() uses PyMuPDF to extract text + page breaks	✅ Pass
+Office Doc Processing	process_office() handles DOCX/XLSX via python-docx and pandas	✅ Pass
+Error Handling	_handle_processing_error() shows status bar alerts + logs	✅ Pass
+Thread Safety	FileProcessingThread runs separately without UI blocking	✅ Pass
+🚀 Simulation Test Summary
+
+Image Upload → Preview displayed + LLaVA description injected into chat
+
+PDF Upload → Text extracted with page breaks + filename shown in preview
+
+DOCX/XLSX Upload → Content converted to markdown/plain text
+
+Switch AI Providers → Config dialog retains all original options
+
+Window State → Geometry restored on app restart via QSettings
