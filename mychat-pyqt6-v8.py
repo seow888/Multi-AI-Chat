@@ -199,6 +199,7 @@ class ChatSessionManager:
             lambda name, content: (
                 self.message_input.append(content),
                 self.attachment_label.setText(f"Attached: {name}"),
+                self.attach_file_to_session(self.current_session_id, file_path),  # RESTORE v6 FEATURE
                 self.file_thread.quit()
             )
         )
@@ -208,6 +209,7 @@ class ChatSessionManager:
                 self.file_thread.quit()
             )
         )
+        self.file_thread.finished.connect(lambda: worker.deleteLater())  # MEMORY FIX
         self.file_thread.started.connect(worker.process)
         self.file_thread.finished.connect(self.file_thread.deleteLater)
         
