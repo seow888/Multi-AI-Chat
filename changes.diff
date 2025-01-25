@@ -1,0 +1,73 @@
+diff --git a/mychat-pyqt6-v6.py b/mychat-pyqt6-v6-updated.py
+--- a/mychat-pyqt6-v6.py
++++ b/mychat-pyqt6-v6-updated.py
+@@ -130,6 +130,12 @@
+ 
+     def attach_file(self):
+         file_path, _ = QFileDialog.getOpenFileName()
++        # Validate file size before processing (100MB limit)
++        if file_path and os.path.exists(file_path):
++            if os.path.getsize(file_path) > 100 * 1024 * 1024:
++                QMessageBox.critical(self, "Error", "File exceeds 100MB size limit")
++                return
++        
+         if not file_path:
+             return
+         
+@@ -208,11 +214,21 @@
+ 
+     def process_file(file_path):
+         mime_type = mimetypes.guess_type(file_path)[0]
++        
++        # Handle text files (missing in original code)
++        if mime_type == 'text/plain':
++            try:
++                with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
++                    return f.read()
++            except UnicodeDecodeError:
++                return f"Could not decode {file_path} as UTF-8"
++            except Exception as e:
++                raise RuntimeError(f"Text file error: {str(e)}")
+ 
+         if mime_type == 'application/pdf':
+             return process_pdf(file_path)
+         elif mime_type in ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+-                          'application/vnd.ms-excel']:
++                           'application/vnd.ms-excel']:
+             return process_excel(file_path)
+         elif mime_type in ['application/vnd.openxmlformats-officedocument.wordprocessingml.document']:
+             return process_docx(file_path)
+@@ -225,9 +241,15 @@
+ 
+     def process_excel(file_path):
+         try:
+-            df = pd.read_excel(file_path)
+-            return "\n\n".join([f"Sheet: {name}\n{sheet.to_string()}" for name, sheet in df.items()])
++            # Fix: Proper file handling and sheet detection
++            with open(file_path, 'rb') as f:
++                df = pd.read_excel(f, sheet_name=None)  # Get all sheets
++                if not df:
++                    return "Empty Excel file"
++                return "\n\n".join([f"Sheet: {name}\n{sheet.to_string()}" for name, sheet in df.items()])
+         except Exception as e:
++            if "No engine" in str(e):
++                return "Error: Install openpyxl (pip install openpyxl)"
+             raise RuntimeError(f"Excel processing failed: {str(e)}")
+ 
+     def process_docx(file_path):
+@@ -343,6 +365,15 @@
+         except Exception as e:
+             self.chat_display.append(f"Error saving session: {str(e)}")
+ 
++    # Add thread-safe session updates
++    def update_session_safe(self, data):
++        self.session_mutex.lock()
++        try:
++            if self.current_session:
++                self.current_session.update(data)
++        finally:
++            self.session_mutex.unlock()
++
+ 
+ if __name__ == "__main__":
+     app = QApplication(sys.argv)
