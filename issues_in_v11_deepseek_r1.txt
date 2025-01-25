@@ -1,0 +1,80 @@
+Code Review Results: mychat-pyqt6-v11.py vs v6
+
+I've conducted a thorough comparison and simulated testing. Here's the breakdown:
+
+🔧 Fixed Issues Confirmed:
+
+Excel Crash (Thread Safety):
+✅ v11 properly uses QTimer.singleShot() to ensure UI updates happen on the main thread when loading Excel data. This addresses crashes caused by thread-unsafe GUI operations.
+
+Text File Attachment:
+✅ Added explicit UTF-8 encoding (encoding='utf-8') when reading text files, resolving encoding-related failures in v6.
+
+🔄 Functionality Consistency Check:
+v11 retains all core features of v6 (chat history, message formatting, file attachment workflow).
+
+⚠️ Identified Issues in v11:
+
+Text File Encoding Limitation:
+❌ Fails to handle non-UTF-8 text files (e.g., GBK/ISO-8859-1).
+Fix: Implement encoding detection (e.g., chardet library) or allow manual encoding selection.
+
+Silent File Read Errors:
+❌ Errors during file reading only print to console; users get no UI feedback.
+Fix: Add error messages in the chat UI (e.g., "Failed to read file: invalid format").
+
+Excel Behavior Change:
+❌ v6 attached only the first sheet; v11 attaches all sheets as separate messages.
+Risk: May overload chat with large multi-sheet files.
+Fix: Add a sheet selector dialog or configurable limit.
+
+Large File Performance:
+❌ Converting huge Excel sheets to strings via df.to_string() can freeze the UI.
+Fix:
+
+Truncate data previews (e.g., show first 100 rows).
+
+Offload heavy processing to threads.
+
+Data Truncation Risk:
+❌ df.to_string() truncates columns/rows for large DataFrames (Pandas default).
+Fix: Adjust Pandas display settings or implement pagination.
+
+Security/UX Gaps:
+❌ No file size checks (risk of loading massive files).
+Fix: Add file size validation (e.g., reject >10MB files).
+
+💡 Recommendations:
+
+Critical Fixes First:
+
+Handle non-UTF-8 text files.
+
+Add user-facing error messages.
+
+Restore single-sheet Excel behavior (or make configurable).
+
+Performance Enhancements:
+
+python
+Copy
+# Example: Truncate large DataFrames
+data = df.head(100).to_string()  # Show first 100 rows
+UX Improvements:
+
+python
+Copy
+# Example: Show error in UI
+QTimer.singleShot(0, lambda: self.add_message_to_chat(
+    f"⚠️ Failed to read {file_path}: Invalid encoding", 
+    is_user=True
+))
+🧪 Testing Protocol:
+
+Attach a GBK-encoded text file → verify graceful error handling.
+
+Load a 50MB Excel file → check UI responsiveness.
+
+Attach multi-sheet Excel → confirm intentional behavior.
+
+L
