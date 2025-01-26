@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
     QStatusBar, QProgressBar # Added for status bar and progress bar
 )
 from concurrent.futures import ThreadPoolExecutor
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QDir, QSize, QSettings, QTimer # Added QSettings
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QDir, QSize, QSettings, QTimer, QObject # Added QSettings
 from PyQt6.QtGui import (
     QFont, QKeySequence, QTextCursor, QColor, QAction, QIcon,
     QTextCharFormat, QPalette, QGuiApplication, QPixmap # Added QPixmap
