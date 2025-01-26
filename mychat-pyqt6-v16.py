@@ -660,9 +660,9 @@ class APIConfigDialog(QDialog):
 
         self.model_combo.clear()
         if provider == "Google Gemini":
-            self.model_combo.addItems(["gemini-2.0-flash-exp", "gemini-pro", "gemini-1.5-flash"])
+            self.model_combo.addItems(["gemini-2.0-flash-exp", "gemini-2.0-flash-thinking-exp", "gemini-exp-1206", "gemini-1.5-pro-latest", "gemini-1.5-flash-latest", "gemini-1.5-pro", "gemini-1.5-flash"])
         elif provider == "OpenAI":
-            self.model_combo.addItems(["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"])
+            self.model_combo.addItems(["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-4o-2024-11-20", "gpt-3.5-turbo"])
         elif provider == "Anthropic Claude":
             self.model_combo.addItems(["claude-3-opus-20240229", "claude-3-sonnet-20240229"])
         elif provider == "xAI Grok":
@@ -670,7 +670,7 @@ class APIConfigDialog(QDialog):
         elif provider == "Ollama":
             self._load_ollama_models()
         elif provider == "OpenAI-Compatible":
-            self.model_combo.addItems(["deepseek-ai/DeepSeek-V3", "custom-model", "llama2-13b-chat", "mixtral-8x7b"])
+            self.model_combo.addItems(["deepseek-ai/DeepSeek-V3", "deepseek-v3", "deepseek-chat", "deepseek-coder", "deepseek-reasoner", "custom-model", "llama2-13b-chat", "mixtral-8x7b"])
             self.base_url_input.setVisible(True)
         elif provider == "DeepSeek":
             self.model_combo.addItems(["deepseek-chat", "deepseek-coder"])
