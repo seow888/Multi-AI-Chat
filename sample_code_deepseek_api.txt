@@ -1,0 +1,97 @@
+import requests
+import json
+
+def call_deepseek(api_key, system_prompt, user_prompt, model_name, temperature=0.7, max_tokens=1024):
+    """
+    Calls the DeepSeek API with specified parameters
+    
+    Args:
+        api_key (str): Your API key
+        system_prompt (str): System role prompt
+        user_prompt (str): User role prompt
+        model_name (str): Model to use (see available_models)
+        temperature (float): Creativity parameter (0.0-1.0)
+        max_tokens (int): Maximum response length
+        
+    Returns:
+        str: Generated content or error message
+    """
+    # Available models as of July 2024 (verify with latest documentation)
+    available_models = {
+        "1": "deepseek-chat",
+        "2": "deepseek-coder-33b-instruct",
+        "3": "deepseek-math-7b-instruct",
+        "4": "deepseek-llm-67b-chat"
+    }
+    
+    # Validate model selection
+    if model_name not in available_models.values():
+        return f"Error: Invalid model selection. Available options: {', '.join(available_models.values())}"
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}",
+        "Accept": "application/json"
+    }
+
+    payload = {
+        "model": model_name,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": False  # Set to True for streaming responses
+    }
+
+    try:
+        response = requests.post(
+            "https://api.deepseek.com/v1/chat/completions",
+            headers=headers,
+            data=json.dumps(payload)
+        )
+
+        if response.status_code == 200:
+            result = response.json()
+            return result['choices'][0]['message']['content'].strip()
+        else:
+            return f"API Error: {response.status_code} - {response.text}"
+
+    except Exception as e:
+        return f"Request failed: {str(e)}"
+
+# Example usage
+if __name__ == "__main__":
+    # Get user input
+    api_key = input("Enter your DeepSeek API key: ").strip()
+    
+    print("\nAvailable models:")
+    print("1. deepseek-chat (General purpose)")
+    print("2. deepseek-coder-33b-instruct (Programming)")
+    print("3. deepseek-math-7b-instruct (Mathematics)")
+    print("4. deepseek-llm-67b-chat (Advanced conversation)")
+    
+    model_choice = input("\nSelect model (1-4): ").strip()
+    model_map = {
+        "1": "deepseek-chat",
+        "2": "deepseek-coder-33b-instruct",
+        "3": "deepseek-math-7b-instruct",
+        "4": "deepseek-llm-67b-chat"
+    }
+    selected_model = model_map.get(model_choice, "deepseek-chat")
+    
+    system_prompt = input("\nEnter system prompt (optional): ").strip() or "You are a helpful assistant."
+    user_prompt = input("Enter your message: ").strip()
+
+    # Call the API
+    response = call_deepseek(
+        api_key=api_key,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        model_name=selected_model
+    )
+
+    print("\nResponse:")
+    print(response)
+    
