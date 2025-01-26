@@ -1221,6 +1221,7 @@ class ModernChatWindow(QMainWindow):
             self.message_manager.add_message("System", message_content, timestamp) # Display system message in chat
             self.session_manager.save_session(self.current_session_id) # Save session with system message
         else:
+            pass # proceed to show file preview regardless
         self._show_file_preview(file_path) # Show file preview after processing
 
     def _handle_processing_error(self, error):
