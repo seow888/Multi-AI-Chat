@@ -1,0 +1,55 @@
+--- mychat-pyqt6-v13.py
++++ mychat-pyqt6-v13-patched.py
+@@ -906,6 +906,7 @@
+         self.session_manager = ChatSessionManager()
+         self.session_manager.main_window = self # v12-patch - Pass ModernChatWindow instance to session_manager
+         self.message_manager = ModernMessageManager(self.chat_display)
++        self.pending_file_content = "" # Initialize pending_file_content
+         self.current_session_id = None
+
+     def _connect_signals(self):
+@@ -960,6 +961,7 @@
+     def _send_message(self):
+         self.send_btn.setEnabled(False)  # Prevent duplicate sends
+         self.preview_label.clear() # Clear preview on sending new message - v12-patch - moved here, ensure preview is cleared before sending
++        user_message_prefix = "" # Initialize prefix
+         QApplication.processEvents()  # Keep UI responsive
+         message = self.input_field.toPlainText().strip()
+         if not message:
+@@ -967,6 +969,14 @@
+             return
+
+         if not self.current_session_id:
++            self._create_new_chat()
++
++        # Prepend pending file content to user message if available
++        if self.pending_file_content:
++            user_message_prefix = "--- Attached File Content ---\n" + self.pending_file_content + "\n--- End of Attached File Content ---\n\n"
++            message = user_message_prefix + message
++            self.pending_file_content = "" # Clear pending content after use
++        elif not self.current_session_id: # create new chat if no session and no pending file
+             self._create_new_chat()
+
+         timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
+@@ -1032,14 +1042,13 @@
+         self.progress_bar.setValue(0) # Reset progress bar
+
+         if text_content:
+-            timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
+-            message_content = f"Attached file content:\n\n{text_content}" # Format message with content
+-            self.session_manager.add_message(
+-                self.current_session_id, "System", message_content, timestamp
+-            )
+-            self.message_manager.add_message("System", message_content, timestamp) # Add system message to chat display
+-            self.session_manager.save_session(self.current_session_id) # Save session
+-
++            self.pending_file_content = f"Attached file content:\n\n{text_content}" # Store file content as pending
++            timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]") # Get timestamp
++            message_content = "<SYSTEM> File content processed and ready to be included in your next message. Type your message and send to include the file content as part of your prompt.</SYSTEM>"
++            self.session_manager.add_message(self.current_session_id, "System", message_content, timestamp) # Add system message to chat log
++            self.message_manager.add_message("System", message_content, timestamp) # Display system message in chat
++            self.session_manager.save_session(self.current_session_id) # Save session with system message
++        else:
+         self._show_file_preview(file_path) # Show file preview after processing
+
+     def _handle_processing_error(self, error):
