@@ -512,7 +512,7 @@ class ApiWorker(QThread):
                                 f"{config['base_url']}/chat/completions",
                                 headers=headers,
                                 json=data,
-                                timeout=15 # Added timeout
+                                timeout=60 # Added timeout
                             )
                             if response.status_code == 429 and retry < max_retries - 1:
                                 sleep_time = retry_delay * (2 ** attempt)
@@ -534,7 +534,7 @@ class ApiWorker(QThread):
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
                         text=True,
-                        timeout=30 # Added timeout
+                        timeout=300 # Added timeout
                     )
                     full_prompt = "\n".join(
                         [f"{msg['role']}: {msg['content']}"
@@ -549,7 +549,7 @@ class ApiWorker(QThread):
                     client = OpenAI(
                         base_url=config["base_url"],
                         api_key=config["api_key"],
-                        timeout=30 # Added timeout
+                        timeout=90 # Added timeout
                     )
                     response = client.chat.completions.create(
                         model=config["model"],
@@ -567,14 +567,13 @@ class ApiWorker(QThread):
                     data = {
                         "model": config["model"],
                         "messages": converted_history,
-                        "temperature": config.get("temperature", 0.7),
-                        "max_tokens": config.get("max_tokens", 10000)
+                        "temperature": config.get("temperature", 0.7)
                     }
                     response = requests.post(
                         "https://api.deepseek.com/v1/chat/completions",
                         headers=headers,
                         json=data,
-                        timeout=30 # Added timeout
+                        timeout=90 # Added timeout
                     )
                     response.raise_for_status()
                     ai_message = response.json()['choices'][0]['message']['content']
