@@ -1,0 +1,31 @@
+$ diff mychat-pyqt6-v13.py mychat-pyqt6-v12.py
+101d100
+<         self.main_window = None
+216c215
+<         worker.finished.connect(lambda name, content, path: QTimer.singleShot(0, lambda: (
+---
+>         worker.finished.connect(lambda name, content: QTimer.singleShot(0, lambda: (
+221,222c220
+<             self.file_thread.quit(),
+<             self.main_window._process_file_content(path) # v12-patch - Call main window's process_file_content
+---
+>             self.file_thread.quit()
+966d963
+<         self.session_manager.main_window = self # v12-patch - Pass ModernChatWindow instance to session_manager
+1023d1019
+<         self.preview_label.clear() # Clear preview on sending new message - v12-patch - moved here, ensure preview is cleared before sending
+1049a1046
+>         self.preview_label.clear() # Clear preview on sending new message
+1068c1065,1074
+<             self.session_manager.attach_file() # Just call session_manager's attach_file - v12-patch - Removed return value handling in ModernChatWindow
+---
+>             file_info = self.session_manager.attach_file() # This now returns filename and path info from ChatSessionManager's attach_file
+>             if file_info: # Check if a file was actually attached
+>                 file_name, file_path = file_info # Unpack the returned tuple
+>
+>                 timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
+>                 self.session_manager.add_message(
+>                     self.current_session_id, "System", f"Attached: {file_name}", timestamp
+>                 )
+>                 self._update_chat_display()
+>                 self._process_file_content(file_path) # Start processing file content
