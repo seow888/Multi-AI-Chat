@@ -5,7 +5,7 @@ $ python mychat-pyqt6-v4.py
 # v5 adds new multimodal capabilities.
 $ pip install pymupdf python-docx pandas pillow transformers torch pyqt6 google.generativeai markdown anthropic openai accelerate bitsandbytes torchvision chardet openpyxl
 
-$ python mychat-pyqt6-v12.py # fixed various file type handling issues in v6
+$ python mychat-pyqt6-v13.py # fixed various file type handling issues in v6
 
 ![image](https://github.com/user-attachments/assets/68ae74f3-3cc2-4bf1-9d8e-019a2c819f3a)
 
