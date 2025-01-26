@@ -1104,7 +1104,7 @@ class ModernChatWindow(QMainWindow):
         self.input_field.append(content) # Append the 'content' (binary attachment message) 
         self.attachment_label.setText(f"Attached: {name}")
         self.attachment_label.setEnabled(True)
-        #self._show_file_preview(path) # Call file preview here
+        self._show_file_preview(path) # Call file preview here
         self._process_file_content(path) # RE-ENABLE file content processing
 
     def _process_file_content(self, file_path):
