@@ -534,7 +534,7 @@ class ApiWorker(QThread):
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
                         text=True,
-                        timeout=15 # Added timeout
+                        timeout=30 # Added timeout
                     )
                     full_prompt = "\n".join(
                         [f"{msg['role']}: {msg['content']}"
@@ -549,7 +549,7 @@ class ApiWorker(QThread):
                     client = OpenAI(
                         base_url=config["base_url"],
                         api_key=config["api_key"],
-                        timeout=15 # Added timeout
+                        timeout=30 # Added timeout
                     )
                     response = client.chat.completions.create(
                         model=config["model"],
@@ -561,18 +561,20 @@ class ApiWorker(QThread):
                 elif provider == "DeepSeek":
                     headers = {
                         "Authorization": f"Bearer {config['api_key']}",
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
                     }
                     data = {
                         "model": config["model"],
                         "messages": converted_history,
-                        "temperature": config.get("temperature", 0.7)
+                        "temperature": config.get("temperature", 0.7),
+                        "max_tokens": config.get("max_tokens", 10000)
                     }
                     response = requests.post(
                         "https://api.deepseek.com/v1/chat/completions",
                         headers=headers,
                         json=data,
-                        timeout=15 # Added timeout
+                        timeout=30 # Added timeout
                     )
                     response.raise_for_status()
                     ai_message = response.json()['choices'][0]['message']['content']
