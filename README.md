@@ -7,7 +7,7 @@ $ pip install pymupdf python-docx pandas pillow transformers torch pyqt6 google.
 
 $ python mychat-pyqt6-v16.py # latest - fixed various file type handling issues in v6
 
-![image](https://github.com/user-attachments/assets/68ae74f3-3cc2-4bf1-9d8e-019a2c819f3a)
+![image](https://github.com/user-attachments/assets/ed5a514b-7925-4add-bbde-c9a5fe53ebed)
 
 ![image](https://github.com/user-attachments/assets/0c8143ee-ff2e-45c5-ad68-3bb0ef30ab8a)
 
