@@ -214,8 +214,8 @@ class ChatSessionManager:
     
         # Success handling
         worker.finished.connect(lambda name, content, path: QTimer.singleShot(0, lambda: (
-            self.message_input.append(content),
-            self.attachment_label.setText(f"Attached: {name}"),
+            self.main_window.input_field.append(content),
+            self.main_window.attachment_label.setText(f"Attached: {name}"),
             self.attach_file_to_session(self.current_session_id, file_path)
             if self.current_session_id else None,
             self.file_thread.quit(),
