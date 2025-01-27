@@ -533,8 +533,7 @@ class ApiWorker(QThread):
                         stdin=subprocess.PIPE,
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
-                        text=True,
-                        timeout=300 # Added timeout
+                        text=True # timeout=300 # Added timeout
                     )
                     full_prompt = "\n".join(
                         [f"{msg['role']}: {msg['content']}"
