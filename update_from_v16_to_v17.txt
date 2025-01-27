@@ -1,0 +1,40 @@
+$ diff mychat-pyqt6-new.py mychat-pyqt6-v17.py
+27a28
+> import chardet
+178,183c179,180
+<             def is_likely_text_file(self):
+<                 """Improved text detection with MIME type fallback"""
+<                 ext = os.path.splitext(self.file_name)[1].lower()
+<                 if ext not in self.text_extensions:
+<                     return False
+<
+---
+>             def is_likely_text_file(self): # REPLACE the existing is_likely_text_file function with this one:
+>                 """Improved text detection with chardet encoding detection"""
+185,188c182,186
+<                     with open(self.file_path, 'rb') as f:
+<                         f.read().decode('utf-8')
+<                     return True
+<                 except UnicodeDecodeError:
+---
+>                     with open(self.file_path, 'rb') as f: # Open in binary read mode ('rb')
+>                         rawdata = f.read(1024) # Read a chunk of bytes
+>                         result = chardet.detect(rawdata) # Detect encoding using chardet
+>                         return result['confidence'] > 0.7 # Check confidence threshold
+>                 except Exception: # Catch any exceptions during file reading or detection
+245,246c243,245
+<         self.main_window.attachment_label.setEnabled(False) # UI updates moved to ModernChatWindow
+<         self.main_window.attachment_label.setText("Attaching...") # UI updates moved to ModernChatWindow
+---
+>         # Remove these lines from ChatSessionManager.attach_file cleanup:
+>         #self.main_window.attachment_label.setEnabled(False) # UI updates moved to ModernChatWindow
+>         #self.main_window.attachment_label.setText("Attaching...") # UI updates moved to ModernChatWindow
+532c531
+<                         ["ollama", "run", config.get("ollama_model", "llama2")],
+---
+>                         ["ollama", "run", config.get("ollama_model", "deepseek-r1:1.5b")],
+536c535,536
+<                         text=True # timeout=300 # Added timeout
+---
+>                         text=True, # timeout=300 # Added timeout
+>                         encoding='utf-8'  # Add this line
