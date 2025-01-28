@@ -1118,6 +1118,30 @@ class ModernChatWindow(QMainWindow):
         self.file_processor_thread.error.connect(self._handle_processing_error)
         self.file_processor_thread.start()
 
+    def process_office(self, file_path): # ADD THIS METHOD TO ModernChatWindow
+        """Process Office documents (docx, xlsx) to extract text content"""
+        text = ""
+        try:
+            self.progress_bar.setValue(10) # Update progress
+            QApplication.processEvents()
+
+            if file_path.lower().endswith(('.docx', '.doc')): # Handle Word documents
+                doc = docx.Document(file_path) # Open Word document
+                for para in doc.paragraphs: # Iterate through paragraphs
+                    text += para.text + "\n" # Append paragraph text
+            elif file_path.lower().endswith(('.xlsx', '.xls', '.csv')): # Handle Excel documents
+                df = pd.read_excel(file_path) if file_path.lower().endswith(('.xlsx', '.xls')) else pd.read_csv(file_path) # Read excel or csv into DataFrame
+                text = df.to_markdown(index=False) # Convert DataFrame to markdown table
+
+            self.progress_bar.setValue(100) # Set progress to 100%
+            QApplication.processEvents()
+
+            return f"Document Content:\n{text}" # Return extracted text
+
+        except Exception as e:
+            logging.error(f"Office document processing error: {e}")
+            raise Exception(f"Office document processing failed: {e}") # Re-raise exception with user-friendly message
+    
     def process_image(self, file_path):
         """Process image file using LLaVA model"""
         try:
