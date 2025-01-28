@@ -466,13 +466,13 @@ class ApiWorker(QThread):
                     genai.configure(api_key=config["api_key"])
                     model = genai.GenerativeModel(config.get("model", "gemini-2.0-flash-exp"))
                     try:
-                        response = model.generate_content(converted_history, request_options={"timeout": 15}) # Added timeout
+                        response = model.generate_content(converted_history, request_options={"timeout": 90}) # Added timeout
                         ai_message = response.text
                     except Exception as e:
                         raise Exception(f"Gemini API Error: {str(e)}") # More specific error message
 
                 elif provider == "OpenAI":
-                    client = OpenAI(api_key=config["api_key"], timeout=15) # Added timeout
+                    client = OpenAI(api_key=config["api_key"], timeout=90) # Added timeout
                     response = client.chat.completions.create(
                         model=config.get("model", "gpt-4o-mini"),
                         messages=converted_history,
