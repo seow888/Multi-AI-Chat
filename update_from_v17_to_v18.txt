@@ -1,0 +1,7 @@
+$ diff mychat-pyqt6-v18.py mychat-pyqt6-v17.py
+149,150c149,150
+<                 # self.main_window.attachment_label.setEnabled(False) # Line causing error
+<                 # self.main_window.attachment_label.setText("Attaching...")
+---
+>                 self.main_window.attachment_label.setEnabled(False) # Line causing error
+>                 self.main_window.attachment_label.setText("Attaching...")
