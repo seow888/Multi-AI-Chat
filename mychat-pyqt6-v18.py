@@ -414,12 +414,9 @@ class FileProcessingThread(QThread):
             elif self.file_path.lower().endswith('.pdf'):
                 self.file_content_text = self.processor.process_pdf(self.file_path)
                 self.finished.emit(self.file_content_text, self.file_path) # emit text and file path (no preview for pdf)
-            elif self.file_path.lower().endswith(('.docx', '.doc')): # Added '.doc' just in case
-                self.file_content_text = self.processor.process_office(self.file_path)
+            elif self.file_path.lower().endswith(('.docx', '.doc', '.xlsx', '.xls', '.csv')): # ADDED .csv here
+                self.file_content_text = self.processor.process_office(self.file_path) # NOW CALLING process_office
                 self.finished.emit(self.file_content_text, self.file_path) # emit text and file path (no preview for office)
-            elif self.file_path.lower().endswith(('.xlsx', '.xls', '.csv')): # Added '.xls' and '.csv'
-                self.file_content_text = self.processor.process_office(self.file_path) # re-use office processor for excel/csv
-                self.finished.emit(self.file_content_text, self.file_path) # emit text and file path (no preview for excel/csv)
             else:
                 raise ValueError("Unsupported file type")
         except Exception as e:
