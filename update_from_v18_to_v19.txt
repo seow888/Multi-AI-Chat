@@ -1,0 +1,67 @@
+$ diff mychat-pyqt6-v19.py /U/mychat-pyqt6-v18.py
+194,195c194,195
+<                         return # EARLY RETURN - Excel handled on main thread now
+<
+---
+>                         return # EARLY RETURN - Excel handled on main thread now
+>
+197,205c197,199
+<                         try: # ADDED try-except block here
+<                             with open(self.file_path, 'r', encoding='utf-8') as f:
+<                                 content = f"<attach-text><pre>{html.escape(f.read())}</pre></attach-text>"
+<                                 self.finished.emit(self.file_name, content, self.file_path) # Emit for text files as before
+<                         except UnicodeDecodeError as e: # Catch UnicodeDecodeError specifically
+<                             self.error.emit(f"Text File Encoding Error ({self.file_name}): Could not decode as UTF-8. Please ensure the file is UTF-8 encoded or try a different text file.")
+<                         except Exception as e: # Catch other file reading errors
+<                             self.error.emit(f"File Error ({self.file_name}): {str(e)}")
+<
+---
+>                         with open(self.file_path, 'r', encoding='utf-8') as f:
+>                             content = f"<attach-text><pre>{html.escape(f.read())}</pre></attach-text>"
+>                             self.finished.emit(self.file_name, content, self.file_path) # Emit for text files as before
+209,210c203,204
+<                         self.finished.emit(self.file_name, content, self.file_path) # Emit for binary files as before
+<
+---
+>                         self.finished.emit(self.file_name, content, self.file_path) # Emit for binary files as before
+>
+533,554c527,542
+<                     api_url = f"http://localhost:11434/api/chat" # Or config.get("base_url", "http://localhost:11434") if you want base_url in config
+<                     headers = {'Content-Type': 'application/json'}
+<                     messages = []
+<                     if system_prompt: # Include system prompt if it exists
+<                         messages.append({"role": "system", "content": system_prompt})
+<                     for msg in converted_history: # Use converted history
+<                         if msg['role'] != 'system': # Don't add system prompt again
+<                             messages.append({"role": msg['role'], "content": msg['content']})
+<
+<                     data = {
+<                         "model": config.get("ollama_model", "deepseek-r1:1.5b"), # Use ollama_model from config
+<                         "messages": messages,
+<                         "stream": False # Set to True if you want streaming
+<                     }
+<                     try:
+<                         response = requests.post(api_url, headers=headers, data=json.dumps(data), timeout=300) # Added timeout
+<                         response.raise_for_status()
+<                         ai_message = response.json()['message']['content'] # Parse correctly for /api/chat
+<                     except requests.exceptions.RequestException as e:
+<                         raise Exception(f"Ollama API Error: {str(e)}")
+<                     except (KeyError, json.JSONDecodeError) as e:
+<                         raise Exception(f"Ollama Response Parse Error: {str(e)}")
+---
+>                     process = subprocess.Popen(
+>                         ["ollama", "run", config.get("ollama_model", "deepseek-r1:1.5b")],
+>                         stdin=subprocess.PIPE,
+>                         stdout=subprocess.PIPE,
+>                         stderr=subprocess.PIPE,
+>                         text=True, # timeout=300 # Added timeout
+>                         encoding='utf-8'  # Add this line
+>                     )
+>                     full_prompt = "\n".join(
+>                         [f"{msg['role']}: {msg['content']}"
+>                          for msg in converted_history]
+>                     )
+>                     stdout, stderr = process.communicate(input=full_prompt)
+>                     if stderr:
+>                         raise Exception(stderr)
+>                     ai_message = stdout.strip()
