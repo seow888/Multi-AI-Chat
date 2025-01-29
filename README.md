@@ -9,6 +9,8 @@ $ python mychat-pyqt6-v18.py # latest - fixed various file type handling issues 
 
 ![image](https://github.com/user-attachments/assets/ed5a514b-7925-4add-bbde-c9a5fe53ebed)
 
+![image](https://github.com/user-attachments/assets/a56a128d-1c7d-4637-80ed-ea9aac45421c)
+
 ![image](https://github.com/user-attachments/assets/0c8143ee-ff2e-45c5-ad68-3bb0ef30ab8a)
 
 ![image](https://github.com/user-attachments/assets/c3b64aa8-2c56-4cfb-a8af-38191a4c66fd)
