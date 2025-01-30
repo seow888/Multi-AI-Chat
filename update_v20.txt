@@ -1,0 +1,175 @@
+$ diff mychat-pyqt6-v20.py mychat-pyqt6-v19.py
+1212a1213,1270
+>     def process_file(file_path):
+>         mime_type = mimetypes.guess_type(file_path)[0]
+>
+>         # Handle text files (missing in original code)
+>         if mime_type == 'text/plain':
+>             try:
+>                 with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+>                     return f.read()
+>             except UnicodeDecodeError:
+>                 return f"Could not decode {file_path} as UTF-8"
+>             except Exception as e:
+>                 raise RuntimeError(f"Text file error: {str(e)}")
+>
+>         if mime_type == 'application/pdf':
+>             return process_pdf(file_path)
+>         elif mime_type in ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+>                            'application/vnd.ms-excel']:
+>             return process_excel(file_path)
+>         elif mime_type in ['application/vnd.openxmlformats-officedocument.wordprocessingml.document']:
+>             return process_docx(file_path)
+>
+>     def process_excel(file_path):
+>         try:
+>             # Fix: Proper file handling and sheet detection
+>                 df = pd.read_excel(file_path, sheet_name=None, engine='openpyxl')
+>                 if not df:
+>                     return "Empty Excel file"
+>                 return "\n\n".join([f"Sheet: {name}\n{sheet.to_string()}" for name, sheet in df.items()])
+>
+>         except Exception as e:
+>             if "No engine" in str(e):
+>                 return "Error: Install openpyxl (pip install openpyxl)"
+>             raise RuntimeError(f"Excel processing failed: {str(e)}")
+>
+>     def process_docx(file_path):
+>         """Process Office documents (docx, xlsx) to extract text content"""
+>         text = ""
+>         try:
+>             self.progress_bar.setValue(10) # Update progress
+>             QApplication.processEvents()
+>
+>             if file_path.lower().endswith(('.docx', '.doc')): # Handle Word documents
+>                 doc = docx.Document(file_path) # Open Word document
+>                 for para in doc.paragraphs: # Iterate through paragraphs
+>                     text += para.text + "\n" # Append paragraph text
+>             elif file_path.lower().endswith(('.xlsx', '.xls', '.csv')): # Handle Excel documents
+>                 df = pd.read_excel(file_path) if file_path.lower().endswith(('.xlsx', '.xls')) else pd.read_csv(file_path) # Read excel or csv into DataFrame
+>                 text = df.to_markdown(index=False) # Convert DataFrame to markdown table
+>
+>             self.progress_bar.setValue(100) # Set progress to 100%
+>             QApplication.processEvents()
+>
+>             return f"Document Content:\n{text}" # Return extracted text
+>
+>         except Exception as e:
+>             logging.error(f"Office document processing error: {e}")
+>             raise Exception(f"Office document processing failed: {e}") # Re-raise exception with user-friendly message
+>
+1236,1237c1294,1295
+<         def _show_file_preview(self, file_path):
+<         """Show preview of the attached file based on file type, enhanced for text, Excel"""
+---
+>     def _show_file_preview(self, file_path):
+>         """Show preview of the attached file based on file type"""
+1241,1267c1299
+<         elif file_path.lower().endswith('.txt'): # Text file preview
+<             try:
+<                 with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+<                     preview_text = f.read(1024) # Read first 1KB for preview
+<                 preview_text = html.escape(preview_text) # Escape HTML for safety
+<                 self.preview_label.setText(f"<pre style='white-space:pre-wrap;'>{preview_text}...</pre>") # Show in <pre> for formatting
+<                 self.preview_label.setStyleSheet("border: 1px solid #E0E0E0; border-radius: 5px; background-color: #FAFAFA; text-align: left; padding: 5px;") # Style for text preview
+<                 self.preview_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft) # Align text to top-left
+<             except Exception as e:
+<                 logging.error(f"Text file preview error: {e}")
+<                 self.preview_label.setText(f"Preview error for text file")
+<                 self.preview_label.setStyleSheet("border: none; background-color: transparent;")
+<                 self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+<         elif file_path.lower().endswith(('.xls', '.xlsx', '.xlsm', '.csv')): # Excel preview
+<             try:
+<                 df = pd.read_excel(file_path) if file_path.lower().endswith(('.xls', '.xlsx', '.xlsm')) else pd.read_csv(file_path)
+<                 preview_text = df.head(10).to_string() # First 10 rows for preview
+<                 preview_text = html.escape(preview_text)
+<                 self.preview_label.setText(f"<pre style='font-size: 9pt; white-space:pre-wrap;'>{preview_text}...</pre>") # Smaller font for Excel, <pre> for formatting
+<                 self.preview_label.setStyleSheet("border: 1px solid #E0E0E0; border-radius: 5px; background-color: #FAFAFA; text-align: left; padding: 5px;") # Style for text preview
+<                 self.preview_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft) # Align text to top-left
+<             except Exception as e:
+<                 logging.error(f"Excel preview error: {e}")
+<                 self.preview_label.setText(f"Preview error for Excel file")
+<                 self.preview_label.setStyleSheet("border: none; background-color: transparent;")
+<                 self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+<         elif file_path.lower().endswith('.pdf'): # PDF preview - filename and type
+---
+>         elif file_path.lower().endswith('.pdf'): # PDF preview - filename only
+1271,1272c1303,1304
+<         elif file_path.lower().endswith(('.docx', '.doc')): # Word docs preview - filename and type
+<             self.preview_label.setText(f"📎 {file_name} (Word document attached)") # Generic document message
+---
+>         elif file_path.lower().endswith(('.docx', '.doc', '.xlsx', '.xls', '.csv')): # Office docs preview - filename only
+>             self.preview_label.setText(f"📎 {file_name} (Document attached)") # Generic document message
+1280c1312
+<
+---
+>
+1297,1355d1328
+<     def process_file(self, file_path):
+<         """Dispatch file processing based on MIME type (now as a method)"""
+<         import mimetypes # Import here, only when needed
+<         mime_type = mimetypes.guess_type(file_path)[0]
+<
+<         # Handle text files
+<         if mime_type == 'text/plain':
+<             return self.process_text_file(file_path) # Call dedicated text file processor
+<         elif mime_type == 'application/pdf':
+<             return self.process_pdf(file_path)
+<         elif mime_type in ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+<                            'application/vnd.ms-excel']:
+<             return self.process_excel(file_path)
+<         elif mime_type in ['application/vnd.openxmlformats-officedocument.wordprocessingml.document']:
+<             return self.process_docx(file_path)
+<         else:
+<             raise ValueError("Unsupported file type for content processing") # More specific error
+<
+<     def process_text_file(self, file_path):
+<         """Process text files (new method)"""
+<         try:
+<             with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+<                 return f.read()
+<         except UnicodeDecodeError:
+<             return f"Could not decode {file_path} as UTF-8"
+<         except Exception as e:
+<             raise RuntimeError(f"Text file error: {str(e)}")
+<
+<     def process_excel(self, file_path):
+<         """Process Excel files (now as a method)"""
+<         try:
+<             # Fix: Proper file handling and sheet detection
+<             df = pd.read_excel(file_path, sheet_name=None, engine='openpyxl')
+<             if not df:
+<                 return "Empty Excel file"
+<             return "\n\n".join([f"Sheet: {name}\n{sheet.to_string()}" for name, sheet in df.items()])
+<         except Exception as e:
+<             if "No engine" in str(e):
+<                 return "Error: Install openpyxl (pip install openpyxl)"
+<             raise RuntimeError(f"Excel processing failed: {str(e)}")
+<
+<     def process_docx(self, file_path):
+<         """Process Word documents (now as a method)"""
+<         text = ""
+<         try:
+<             self.progress_bar.setValue(10) # Update progress
+<             QApplication.processEvents()
+<
+<             if file_path.lower().endswith(('.docx', '.doc')): # Handle Word documents
+<                 doc = docx.Document(file_path) # Open Word document
+<                 for para in doc.paragraphs: # Iterate through paragraphs
+<                     text += para.text + "\n" # Append paragraph text
+<             elif file_path.lower().endswith(('.xlsx', '.xls', '.csv')): # Handle Excel documents - NOTE: This part seems redundant here, as Excel is handled in process_excel
+<                 df = pd.read_excel(file_path) if file_path.lower().endswith(('.xlsx', '.xls')) else pd.read_csv(file_path) # Read excel or csv into DataFrame
+<                 text = df.to_markdown(index=False) # Convert DataFrame to markdown table # NOTE: also redundant here
+<
+<             self.progress_bar.setValue(100) # Set progress to 100%
+<             QApplication.processEvents()
+<             return f"Document Content:\n{text}" # Return extracted text
+1357,1360d1329
+<         except Exception as e:
+<             logging.error(f"Office document processing error: {e}")
+<             raise Exception(f"Office document processing failed: {e}") # Re-raise exception with user-friendly message
+<
+1432c1401
+<         result = self.processor.process_file(self.file_path) # Call method via processor instance
+---
+>         result = process_file(self.file_path)
