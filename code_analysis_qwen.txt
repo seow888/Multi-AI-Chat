@@ -17,3 +17,149 @@ qt.qpa.fonts: DirectWrite: CreateFontFaceFromHDC() failed (Indicates an error in
 qt.qpa.fonts: DirectWrite: CreateFontFaceFromHDC() failed (Indicates an error in an input file such as a font file.) for QFontDef(Family="Modern", stylename=Regular, pointsize=9, pixelsize=73, styleHint=5, weight=500, stretch=100, hintingPreference=0) LOGFONT("Modern", lfWidth=0, lfHeight=-73) dpi=96
 qt.qpa.fonts: DirectWrite: CreateFontFaceFromHDC() failed (Indicates an error in an input file such as a font file.) for QFontDef(Family="MS Sans Serif", stylename=Regular, pointsize=9, pixelsize=13, styleHint=5, weight=500, stretch=100, hintingPreference=0) LOGFONT("MS Sans Serif", lfWidth=0, lfHeight=-13) dpi=96
 qt.qpa.fonts: DirectWrite: CreateFontFaceFromHDC() failed (Indicates an error in an input file such as a font file.) for QFontDef(Family="MS Serif", stylename=Regular, pointsize=9, pixelsize=13, styleHint=5, weight=500, stretch=100, hintingPreference=0) LOGFONT("MS Serif", lfWidth=0, lfHeight=-13) dpi=96
+
+
+
+
+Based on the runtime error messages provided, there are a few key observations and potential causes to consider:
+
+### 1. **Font Loading Issues (DirectWrite Errors)**
+The most prominent errors in your log are related to font loading:
+
+```
+qt.qpa.fonts: DirectWrite: CreateFontFaceFromHDC() failed (Indicates an error in an input file such as a font file.)
+```
+
+This error is repeated for several fonts:
+- `8514oem`
+- `Fixedsys`
+- `Modern`
+- `MS Sans Serif`
+- `MS Serif`
+
+#### **Possible Causes:**
+1. **Missing or Corrupted Font Files:**
+   - The system might be missing some of these fonts, or they could be corrupted.
+   - These fonts (`8514oem`, `Fixedsys`, `Modern`, `MS Sans Serif`, `MS Serif`) are older fonts that may not be present on all systems, especially modern Windows versions.
+
+2. **Incompatible Font Rendering Backend (DirectWrite):**
+   - PyQt6 uses the DirectWrite API on Windows for font rendering. If the system's DirectWrite implementation has issues or if certain fonts are incompatible with DirectWrite, it can lead to these errors.
+   - Some older fonts may not be fully compatible with DirectWrite, leading to failures when trying to load them.
+
+3. **Default Font Settings:**
+   - The application might be trying to use one of these fonts as the default font, but since they are either missing or incompatible, the system fails to load them.
+   - This could happen if the application doesn't explicitly set a default font and relies on system defaults, which might include these problematic fonts.
+
+---
+
+### 2. **Geometry Restoration Warning**
+You also see the following logs related to window geometry restoration:
+
+```
+➡️ Entering ModernChatWindow.load_settings()
+⚙️ load_settings: Found geometry in settings: b'\x01\xd9\xd0\xcb\x00\x03\x00\x00\x00\x00\x00\x0f\x00\x00\x00\x0e\x00\x00\x04\xbe\x00\x00\x02\xe6\x00\x00\x00\x0f\x00\x00\x00+\x00\x00\x04\xbe\x00\x00\x02\xe6\x00\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x0f\x00\x00\x00+\x00\x00\x04\xbe\x00\x00\x02\xe6'
+✅ load_settings: Successfully restored geometry.
+```
+
+#### **Possible Causes:**
+1. **Corrupted or Incompatible Geometry Data:**
+   - Although the geometry restoration appears to succeed, the binary data stored in `QSettings` might be corrupted or incompatible with the current environment.
+   - This could happen if the application was previously run on a different system with a different screen resolution or DPI setting.
+
+2. **DPI Scaling Issues:**
+   - If the application was run on a system with different DPI scaling settings, restoring the geometry might cause layout issues or warnings.
+
+---
+
+### 3. **Checkpoint Loading Message**
+The following message appears during initialization:
+
+```
+Loading checkpoint shards: 100%|█████████████████████████████████████████████████████████| 3/3 [00:01<00:00,  1.96it/s]
+```
+
+#### **Observation:**
+- This message indicates that the application successfully loaded a model checkpoint (likely for the LLaVA model).
+- There are no errors here, so this part of the initialization seems to be working correctly.
+
+---
+
+### **Recommendations to Resolve the Issues**
+
+#### **1. Address Font Loading Errors:**
+To resolve the font-related errors, you can take the following steps:
+
+- **Set a Default Font Explicitly:**
+  Modify the `ModernChatWindow._apply_styles()` method to explicitly set a default font for the application. For example:
+
+  ```python
+  def _apply_styles(self):
+      default_font = QFont("Segoe UI", 10)  # Use a modern, widely available font
+      QApplication.setFont(default_font)
+
+      self.setStyleSheet("""
+      QMainWindow {
+          background-color: #F0F2F5;
+          font-family: 'Segoe UI', Arial;
+      }
+      ...
+      """)
+  ```
+
+  This ensures that the application uses a specific font (`Segoe UI` in this case) instead of relying on system defaults.
+
+- **Install Missing Fonts:**
+  If you need to use any of the problematic fonts (`8514oem`, `Fixedsys`, etc.), ensure they are installed on the system. You can download and install them manually if necessary.
+
+- **Fallback Fonts:**
+  Update the stylesheet to include fallback fonts in case the primary font fails to load. For example:
+
+  ```css
+  font-family: 'Segoe UI', Arial, sans-serif;
+  ```
+
+#### **2. Handle Geometry Restoration Gracefully:**
+To avoid potential issues with geometry restoration, you can add error handling and fallback logic in the `load_settings()` method:
+
+```python
+def load_settings(self):
+    print(f"➡️ Entering ModernChatWindow.load_settings()")
+    geometry = self.settings.value("geometry")
+    if geometry:
+        print(f"⚙️ load_settings: Found geometry in settings: {geometry}")
+        try:
+            self.restoreGeometry(geometry)
+            print(f"✅ load_settings: Successfully restored geometry.")
+        except Exception as e:
+            logging.error(f"Error restoring geometry: {e}")
+            print(f"❌ load_settings: Error restoring geometry: {e}")
+            # Fallback to default geometry
+            self.setGeometry(100, 100, 1200, 800)
+    else:
+        print(f"ℹ️ load_settings: No geometry found in settings.")
+        # Set default geometry if no saved geometry exists
+        self.setGeometry(100, 100, 1200, 800)
+    print(f"⬅️ Exiting ModernChatWindow.load_settings()")
+```
+
+This ensures that the application falls back to a default geometry if the saved geometry cannot be restored.
+
+#### **3. Debugging Font Issues:**
+If the font errors persist, you can debug further by printing the list of available fonts on the system:
+
+```python
+from PyQt6.QtGui import QFontDatabase
+
+def print_available_fonts():
+    font_db = QFontDatabase()
+    print("Available fonts:")
+    for family in font_db.families():
+        print(family)
+```
+
+Call this function during initialization to verify which fonts are available on the system.
+
+---
+
+### **Conclusion**
+The runtime errors are primarily related to font loading and geometry restoration. By explicitly setting a default font, ensuring compatibility with the DirectWrite API, and handling geometry restoration gracefully, you can resolve these issues. Additionally, debugging the available fonts on the system can help identify any missing or problematic fonts.
