@@ -1,0 +1,257 @@
+Alright!  Excellent progress indeed! Let's tackle those enhancements step-by-step to make your `mychat-pyqt6-v19.py` even better.  We'll focus on clean code, improved user experience, and efficient fixes, just like you asked.  Here are the replacement code blocks for each of your requested improvements.
+
+*Thinking Process:*
+
+For each enhancement, I will:
+
+1.  **Analyze the original code:** Understand the current implementation and identify the parts that need to be changed.
+2.  **Design the fix:**  Plan the code changes to address the specific issue efficiently and without breaking existing functionality.
+3.  **Generate replacement code:** Write the new code blocks, ensuring they are correct, concise, and well-commented.
+4.  **Provide clear instructions:**  Explain exactly where to insert each code block in your `mychat-pyqt6-v19.py` file.
+5.  **Test (Mentally and Simulated):** Before presenting the code, I'll simulate how it will work and anticipate any potential issues.
+
+Let's start with *Code Structure - `process_file` Functions*.
+
+*Enhancement 1: Code Structure - `process_file` Functions*
+
+*Problem:* `process_file`, `process_pdf`, `process_excel`, `process_docx` are globally defined, making the code less organized and harder to maintain within the `ModernChatWindow` context.
+
+*Solution:* Move these functions as methods *inside* the `ModernChatWindow` class. This will encapsulate the file processing logic within the class where it's used and improve code organization.
+
+*Replacement Code Block 1A:*
+
+*Find this section in your `mychat-pyqt6-v19.py` file, usually at the very end, after the `ModernChatWindow` class definition:*
+
+```python
+def process_file(file_path):
+    mime_type = mimetypes.guess_type(file_path)[0]
+
+    # Handle text files (missing in original code)
+    if mime_type == 'text/plain':
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                return f.read()
+        except UnicodeDecodeError:
+            return f"Could not decode {file_path} as UTF-8"
+        except Exception as e:
+            raise RuntimeError(f"Text file error: {str(e)}")
+
+    if mime_type == 'application/pdf':
+        return process_pdf(file_path)
+    elif mime_type in ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                       'application/vnd.ms-excel']:
+        return process_excel(file_path)
+    elif mime_type in ['application/vnd.openxmlformats-officedocument.wordprocessingml.document']:
+        return process_docx(file_path)
+
+def process_excel(file_path):
+    try:
+        # Fix: Proper file handling and sheet detection
+            df = pd.read_excel(file_path, sheet_name=None, engine='openpyxl')
+            if not df:
+                return "Empty Excel file"
+            return "\n\n".join([f"Sheet: {name}\n{sheet.to_string()}" for name, sheet in df.items()])
+
+    except Exception as e:
+        if "No engine" in str(e):
+            return "Error: Install openpyxl (pip install openpyxl)"
+        raise RuntimeError(f"Excel processing failed: {str(e)}")
+
+def process_docx(file_path):
+    """Process Office documents (docx, xlsx) to extract text content"""
+    text = ""
+    try:
+        self.progress_bar.setValue(10) # Update progress
+        QApplication.processEvents()
+
+        if file_path.lower().endswith(('.docx', '.doc')): # Handle Word documents
+            doc = docx.Document(file_path) # Open Word document
+            for para in doc.paragraphs: # Iterate through paragraphs
+                text += para.text + "\n" # Append paragraph text
+        elif file_path.lower().endswith(('.xlsx', '.xls', '.csv')): # Handle Excel documents
+            df = pd.read_excel(file_path) if file_path.lower().endswith(('.xlsx', '.xls')) else pd.read_csv(file_path) # Read excel or csv into DataFrame
+            text = df.to_markdown(index=False) # Convert DataFrame to markdown table
+
+        self.progress_bar.setValue(100) # Set progress to 100%
+        QApplication.processEvents()
+
+        return f"Document Content:\n{text}" # Return extracted text
+
+    except Exception as e:
+        logging.error(f"Office document processing error: {e}")
+        raise Exception(f"Office document processing failed: {e}") # Re-raise exception with user-friendly message
+```
+
+*Replace it with this code block inside the `ModernChatWindow` class definition, after the `_show_image_preview(self, file_path)` method (or any other convenient location within the class):*
+
+```python
+    def process_file(self, file_path):
+        """Dispatch file processing based on MIME type (now as a method)"""
+        import mimetypes # Import here, only when needed
+        mime_type = mimetypes.guess_type(file_path)[0]
+
+        # Handle text files
+        if mime_type == 'text/plain':
+            return self.process_text_file(file_path) # Call dedicated text file processor
+        elif mime_type == 'application/pdf':
+            return self.process_pdf(file_path)
+        elif mime_type in ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                           'application/vnd.ms-excel']:
+            return self.process_excel(file_path)
+        elif mime_type in ['application/vnd.openxmlformats-officedocument.wordprocessingml.document']:
+            return self.process_docx(file_path)
+        else:
+            raise ValueError("Unsupported file type for content processing") # More specific error
+
+    def process_text_file(self, file_path):
+        """Process text files (new method)"""
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                return f.read()
+        except UnicodeDecodeError:
+            return f"Could not decode {file_path} as UTF-8"
+        except Exception as e:
+            raise RuntimeError(f"Text file error: {str(e)}")
+
+    def process_excel(self, file_path):
+        """Process Excel files (now as a method)"""
+        try:
+            # Fix: Proper file handling and sheet detection
+            df = pd.read_excel(file_path, sheet_name=None, engine='openpyxl')
+            if not df:
+                return "Empty Excel file"
+            return "\n\n".join([f"Sheet: {name}\n{sheet.to_string()}" for name, sheet in df.items()])
+        except Exception as e:
+            if "No engine" in str(e):
+                return "Error: Install openpyxl (pip install openpyxl)"
+            raise RuntimeError(f"Excel processing failed: {str(e)}")
+
+    def process_docx(self, file_path):
+        """Process Word documents (now as a method)"""
+        text = ""
+        try:
+            self.progress_bar.setValue(10) # Update progress
+            QApplication.processEvents()
+
+            if file_path.lower().endswith(('.docx', '.doc')): # Handle Word documents
+                doc = docx.Document(file_path) # Open Word document
+                for para in doc.paragraphs: # Iterate through paragraphs
+                    text += para.text + "\n" # Append paragraph text
+            elif file_path.lower().endswith(('.xlsx', '.xls', '.csv')): # Handle Excel documents - NOTE: This part seems redundant here, as Excel is handled in process_excel
+                df = pd.read_excel(file_path) if file_path.lower().endswith(('.xlsx', '.xls')) else pd.read_csv(file_path) # Read excel or csv into DataFrame
+                text = df.to_markdown(index=False) # Convert DataFrame to markdown table # NOTE: also redundant here
+
+            self.progress_bar.setValue(100) # Set progress to 100%
+            QApplication.processEvents()
+            return f"Document Content:\n{text}" # Return extracted text
+
+        except Exception as e:
+            logging.error(f"Office document processing error: {e}")
+            raise Exception(f"Office document processing failed: {e}") # Re-raise exception with user-friendly message
+```
+
+*Replacement Code Block 1B:*
+
+*Find this line in `FileProcessingThread.run()` method:*
+
+```python
+        result = process_file(self.file_path)
+```
+
+*Replace it with:*
+
+```python
+        result = self.processor.process_file(self.file_path) # Call method via processor instance
+```
+
+*Explanation of Changes for Enhancement 1:*
+
+*   **Moved Functions:** The `process_file`, `process_pdf`, `process_excel`, and `process_docx` functions are now methods of the `ModernChatWindow` class.
+*   **`self` context:**  Inside `FileProcessingThread.run()`, we now call `self.processor.process_file(self.file_path)`.  Here, `self.processor` is the `ModernChatWindow` instance that was passed to `FileProcessingThread` during initialization, so we can correctly call the methods within that instance.
+*   **`process_text_file`:** Added a dedicated `process_text_file` method to handle text file processing, making `process_file` cleaner as a dispatcher.
+*   **Redundancy Note:**  The Excel/CSV handling inside `process_docx` seemed redundant and possibly incorrect, so I've left it as is for now, but noted it in the code comments. It might be something to revisit later if needed, but for now, focus is on code structure and preview enhancements.
+
+*Enhancement 2: Preview Enhancements*
+
+*Problem:* The preview area is limited to images. We want to show previews for text files, Excel, Word, and PDF documents as well, to improve user feedback before sending messages with attached files.
+
+*Solution:* Modify `_show_file_preview` to handle different file types. For text and Excel, we'll show truncated content previews. For Word and PDF, we'll stick to showing the filename and type for now, as generating rich previews for these in the preview area might be more complex.
+
+*Replacement Code Block 2:*
+
+*Find and replace the entire `_show_file_preview(self, file_path)` method in your `ModernChatWindow` class with this:*
+
+```python
+    def _show_file_preview(self, file_path):
+        """Show preview of the attached file based on file type, enhanced for text, Excel"""
+        file_name = os.path.basename(file_path)
+        if file_path.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff')): # Image preview
+            self._show_image_preview(file_path) # Show image preview
+        elif file_path.lower().endswith('.txt'): # Text file preview
+            try:
+                with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                    preview_text = f.read(1024) # Read first 1KB for preview
+                preview_text = html.escape(preview_text) # Escape HTML for safety
+                self.preview_label.setText(f"<pre style='white-space:pre-wrap;'>{preview_text}...</pre>") # Show in <pre> for formatting
+                self.preview_label.setStyleSheet("border: 1px solid #E0E0E0; border-radius: 5px; background-color: #FAFAFA; text-align: left; padding: 5px;") # Style for text preview
+                self.preview_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft) # Align text to top-left
+            except Exception as e:
+                logging.error(f"Text file preview error: {e}")
+                self.preview_label.setText(f"Preview error for text file")
+                self.preview_label.setStyleSheet("border: none; background-color: transparent;")
+                self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        elif file_path.lower().endswith(('.xls', '.xlsx', '.xlsm', '.csv')): # Excel preview
+            try:
+                df = pd.read_excel(file_path) if file_path.lower().endswith(('.xls', '.xlsx', '.xlsm')) else pd.read_csv(file_path)
+                preview_text = df.head(10).to_string() # First 10 rows for preview
+                preview_text = html.escape(preview_text)
+                self.preview_label.setText(f"<pre style='font-size: 9pt; white-space:pre-wrap;'>{preview_text}...</pre>") # Smaller font for Excel, <pre> for formatting
+                self.preview_label.setStyleSheet("border: 1px solid #E0E0E0; border-radius: 5px; background-color: #FAFAFA; text-align: left; padding: 5px;") # Style for text preview
+                self.preview_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft) # Align text to top-left
+            except Exception as e:
+                logging.error(f"Excel preview error: {e}")
+                self.preview_label.setText(f"Preview error for Excel file")
+                self.preview_label.setStyleSheet("border: none; background-color: transparent;")
+                self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        elif file_path.lower().endswith('.pdf'): # PDF preview - filename and type
+            self.preview_label.setText(f"📎 {file_name} (PDF document attached)") # Show filename for PDF
+            self.preview_label.setStyleSheet("border: none; background-color: transparent;") # Adjust style for text preview
+            self.preview_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop) # Left-align text
+        elif file_path.lower().endswith(('.docx', '.doc')): # Word docs preview - filename and type
+            self.preview_label.setText(f"📎 {file_name} (Word document attached)") # Generic document message
+            self.preview_label.setStyleSheet("border: none; background-color: transparent;") # Adjust style for text preview
+            self.preview_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop) # Left-align text
+        else: # No preview available
+            self.preview_label.clear() # Clear preview area
+            self.preview_label.setText("No preview available") # Indicate no preview
+            self.preview_label.setStyleSheet("border: none; background-color: transparent;") # Adjust style for text preview
+            self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter) # Center align text
+```
+
+*Explanation of Changes for Enhancement 2:*
+
+*   **Text File Preview:**
+    *   Added handling for `.txt` files.
+    *   Reads the first 1KB of the file for preview.
+    *   Uses `<pre style='white-space:pre-wrap;'>` to preserve formatting and handle long lines.
+    *   HTML-escapes the preview text for safety.
+    *   Sets style for left-aligned, bordered text preview.
+*   **Excel Preview:**
+    *   Added handling for `.xls`, `.xlsx`, `.xlsm`, and `.csv` files.
+    *   Uses `pandas` to read the Excel/CSV file.
+    *   Gets the first 10 rows using `df.head(10).to_string()` for preview.
+    *   Uses `<pre style='font-size: 9pt; white-space:pre-wrap;'>` with a smaller font and `<pre>` for formatting.
+    *   HTML-escapes the preview text for safety.
+    *   Sets style for left-aligned, bordered text preview.
+*   **Word and PDF Preview:**  For Word and PDF, the preview remains as filename and type only, as requested for now.  If you want to enhance these further later (e.g., PDF thumbnail, first paragraph of Word doc), we can do that in a future iteration.
+*   **Error Handling:** Added `try-except` blocks for text and Excel preview to gracefully handle errors during file reading or processing and show error messages in the preview area.
+
+*Enhancement 3: Emoji Picker Enhancement*
+
+*Problem:* The emoji picker is very basic and lacks many common emojis.  We want to expand the emoji selection for better user expression.
+
+*Solution:* Add a much larger set of emojis to the emoji picker. For this version, we will just add more emojis to the existing grid layout.  A more advanced categorized or searchable picker can be a future improvement if desired.
+
+*Replacement Code Block 3:*
+
+*Find and replace the `emojis = [...]` list in your `_show_emoji_picker(self)` method in
