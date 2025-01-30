@@ -1,0 +1,46 @@
+$ diff mychat-pyqt6-v20.py mychat-pyqt6-v19.py
+1236,1237c1236,1237
+<     def _show_file_preview(self, file_path):
+<         """Show preview of the attached file based on file type"""
+---
+>         def _show_file_preview(self, file_path):
+>         """Show preview of the attached file based on file type, enhanced for text, Excel"""
+1241c1241
+<         elif file_path.lower().endswith('.txt'): # Text file preview - RESTORED
+---
+>         elif file_path.lower().endswith('.txt'): # Text file preview
+1254c1254,1267
+<         elif file_path.lower().endswith('.pdf'): # PDF preview - filename only
+---
+>         elif file_path.lower().endswith(('.xls', '.xlsx', '.xlsm', '.csv')): # Excel preview
+>             try:
+>                 df = pd.read_excel(file_path) if file_path.lower().endswith(('.xls', '.xlsx', '.xlsm')) else pd.read_csv(file_path)
+>                 preview_text = df.head(10).to_string() # First 10 rows for preview
+>                 preview_text = html.escape(preview_text)
+>                 self.preview_label.setText(f"<pre style='font-size: 9pt; white-space:pre-wrap;'>{preview_text}...</pre>") # Smaller font for Excel, <pre> for formatting
+>                 self.preview_label.setStyleSheet("border: 1px solid #E0E0E0; border-radius: 5px; background-color: #FAFAFA; text-align: left; padding: 5px;") # Style for text preview
+>                 self.preview_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft) # Align text to top-left
+>             except Exception as e:
+>                 logging.error(f"Excel preview error: {e}")
+>                 self.preview_label.setText(f"Preview error for Excel file")
+>                 self.preview_label.setStyleSheet("border: none; background-color: transparent;")
+>                 self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+>         elif file_path.lower().endswith('.pdf'): # PDF preview - filename and type
+1258,1259c1271,1272
+<         elif file_path.lower().endswith(('.docx', '.doc', '.xlsx', '.xls', '.csv')): # Office docs preview - filename only
+<             self.preview_label.setText(f"📎 {file_name} (Document attached)") # Generic document message
+---
+>         elif file_path.lower().endswith(('.docx', '.doc')): # Word docs preview - filename and type
+>             self.preview_label.setText(f"📎 {file_name} (Word document attached)") # Generic document message
+1266c1279
+<             self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+---
+>             self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter) # Center align text
+1326c1339
+<         """Process Word documents (docx, doc) to extract text content"""
+---
+>         """Process Word documents (now as a method)"""
+1335a1349,1351
+>             elif file_path.lower().endswith(('.xlsx', '.xls', '.csv')): # Handle Excel documents - NOTE: This part seems redundant here, as Excel is handled in process_excel
+>                 df = pd.read_excel(file_path) if file_path.lower().endswith(('.xlsx', '.xls')) else pd.read_csv(file_path) # Read excel or csv into DataFrame
+>                 text = df.to_markdown(index=False) # Convert DataFrame to markdown table # NOTE: also redundant here
